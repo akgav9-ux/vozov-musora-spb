@@ -71,6 +71,7 @@ function orderText(order) {
     `Номер: #${order.id}`,
     `Услуга: ${order.service}`,
     `Объём: ${order.volume || "не указан"}`,
+    `Что нужно вывезти: ${order.details || "не указано"}`,
     `Предварительная стоимость: ${order.price_estimate || "уточнить"}`,
     "",
     "Нажмите кнопку, чтобы взять заказ. Контакты клиента откроются только первому исполнителю.",
@@ -89,12 +90,13 @@ async function createOrder(req, res) {
   const address = String(input.address || "").trim();
   const service = String(input.service || "").trim();
   const volume = String(input.volume || "").trim();
+  const details = String(input.details || "").trim();
   const price_estimate = String(input.priceEstimate || "").trim();
 
   if (customer_name.length < 2 || customer_name.length > 70 ||
       phone.replace(/\D/g, "").length !== 11 ||
       address.length > 300 || service.length < 2 || service.length > 200 ||
-      volume.length > 100 || price_estimate.length > 100) {
+      volume.length > 200 || details.length < 3 || details.length > 2000 || price_estimate.length > 100) {
     return json(res, 400, { error: "Проверьте имя, телефон и услугу." });
   }
 
@@ -105,6 +107,7 @@ async function createOrder(req, res) {
       body: JSON.stringify({
         customer_name, phone, address, service,
         volume: volume || null,
+        details,
         price_estimate: price_estimate || null,
       }),
     });
@@ -211,6 +214,7 @@ async function handleTelegramUpdate(update) {
           `Телефон: ${claimed[0].phone}`,
           `Адрес: ${claimed[0].address || "не указан"}`,
           `Объём: ${claimed[0].volume || "не указан"}`,
+          `Что нужно вывезти: ${claimed[0].details || "не указано"}`,
           `Цена: ${claimed[0].price_estimate || "уточнить у диспетчера"}`,
           "",
           "Свяжитесь с диспетчером для подтверждения заказа.",
@@ -254,6 +258,7 @@ async function handleTelegramUpdate(update) {
             `Услуга: ${claimed[0].service}`,
             `Адрес: ${claimed[0].address || "не указан"}`,
             `Объём: ${claimed[0].volume || "не указан"}`,
+            `Что нужно вывезти: ${claimed[0].details || "не указано"}`,
             `Цена: ${claimed[0].price_estimate || "уточнить"}`,
             "Телефон исполнителя: ожидается — исполнитель может отправить его кнопкой в личном чате с ботом.",
           ].join("\n"),
