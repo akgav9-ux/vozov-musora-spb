@@ -2684,3 +2684,213 @@ h3 {
   .vehicle-price-main h3 { font-size: 15px; }
   .vehicle-price-main > strong { font-size: 18px; }
 }
+
+
+/* Mobile home layout: compact header, split hero and quick quote calculator. */
+@media (max-width: 760px) {
+  .header {
+    height: 72px;
+    width: calc(100% - 28px);
+    gap: 9px;
+  }
+  .header-phone {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 2px 0 auto;
+    white-space: nowrap;
+  }
+  .header-phone > svg {
+    width: 23px;
+    height: 23px;
+    flex: 0 0 auto;
+  }
+  .header-phone strong {
+    display: block;
+    font-size: clamp(11px, 2.2vw, 15px);
+    line-height: 1.15;
+  }
+  .header-phone small {
+    display: block;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .header-whatsapp { display: none; }
+  .mobile-menu-toggle { flex: 0 0 32px; }
+  .hero {
+    height: 420px;
+    overflow: hidden;
+  }
+  .hero-image {
+    top: auto;
+    bottom: 0;
+    height: 255px;
+    object-fit: cover;
+    object-position: 70% center;
+  }
+  .hero-wash {
+    background: linear-gradient(180deg, #f0f6ff 0%, #f0f6ff 42%, #f0f6ffdc 57%, #f0f6ff00 83%);
+  }
+  .hero-content {
+    width: calc(100% - 34px);
+    padding-top: 12px;
+  }
+  .hero-content h1 {
+    max-width: 560px;
+    font-size: clamp(27px, 5.2vw, 38px);
+    line-height: 0.99;
+  }
+  .hero-content h1 span { display: inline; }
+  .hero-content h2 {
+    margin: 8px 0 10px;
+    font-size: clamp(17px, 3.2vw, 22px);
+  }
+  .hero-benefits {
+    gap: 5px;
+    font-size: 12px;
+  }
+  .hero-benefits .check-icon {
+    width: 15px;
+    height: 15px;
+  }
+  .hero-actions { margin-top: 13px; }
+  .hero-cta {
+    flex: 0 0 auto;
+    min-height: 42px;
+    padding: 9px 16px;
+    font-size: 13px;
+  }
+  .about-button { display: none; }
+  .services-section {
+    padding-top: 8px;
+    margin-bottom: 0;
+  }
+  .section-heading {
+    height: 38px;
+    margin-bottom: 7px;
+  }
+  .section-heading h2 { font-size: 25px; }
+  .services-grid {
+    width: calc(100% - 28px);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .service-tile {
+    height: 104px;
+    padding: 7px 4px;
+    font-size: 11px;
+    line-height: 1.15;
+  }
+  .service-icon { width: 40px; height: 38px; }
+  .service-icon-truck { width: 48px; }
+  .service-icon-sofa { width: 45px; }
+  .service-popular {
+    grid-column: auto;
+    height: 104px;
+    margin: 0;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+  }
+  .service-popular .service-icon { width: 43px; height: 40px; }
+  .popular-label { top: -7px; right: 4px; font-size: 9px; padding: 3px 6px; }
+  .advantages {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    margin-top: 20px;
+    gap: 15px;
+  }
+  .calculator {
+    order: 1;
+    width: 100%;
+    margin: 0;
+    padding: 17px;
+    border-radius: 15px;
+  }
+  .calculator-title { margin-bottom: 12px; }
+  .calculator-title h3 { font-size: 22px; }
+  .calculator-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .calculator-form .input-wrap { height: 43px; min-width: 0; }
+  .calculator-form .input-wrap:first-child,
+  .calculator-form .input-wrap:nth-child(4) { grid-column: 1 / -1; }
+  .calculator-form .calculator-submit { grid-column: 1 / -1; }
+  .data-safe { margin-top: 8px; }
+  .advantages-copy {
+    order: 2;
+    width: 100%;
+    padding: 0;
+  }
+  .advantages-copy h2 {
+    font-size: 25px;
+    margin-bottom: 12px;
+  }
+  .advantages-copy .check-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+    font-size: 12px;
+  }
+  .advantages-image {
+    order: 3;
+    position: relative;
+    inset: auto;
+    width: calc(100% + 28px);
+    height: 185px;
+    margin-left: -14px;
+    mask-image: none;
+    border-radius: 12px;
+  }
+  .demolition-section { margin-top: 18px; }
+  .demolition-banner { height: 245px; }
+  .demolition-banner > img {
+    width: 100%;
+    object-fit: cover;
+    object-position: 72% center;
+  }
+  .demolition-wash {
+    background: linear-gradient(90deg, #d5e5fff2 0%, #d5e5ffdb 48%, #d5e5ff22 100%);
+  }
+  .demolition-copy { top: 15px; left: 15px; }
+  .demolition-copy h2 { font-size: 27px; }
+  .demolition-copy p { max-width: 210px; font-size: 12px; }
+  .demolition-action { left: 15px; top: 145px; }
+  .demolition-action .check-list { display: none; }
+  .demolition-action .button { margin-top: 0; min-height: 38px; font-size: 12px; }
+}
+@media (max-width: 559px) {
+  .header-phone small { display: none; }
+  .header-phone strong { font-size: 11px; }
+  .header-phone > svg { width: 20px; height: 20px; }
+  .hero { height: 455px; }
+  .hero-image { height: 235px; object-position: 69% center; }
+  .hero-content h1 { font-size: clamp(27px, 8vw, 36px); }
+  .hero-content h1 span { display: block; }
+  .hero-benefits { font-size: 12px; }
+  .services-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .service-tile { height: 105px; font-size: 13px; }
+  .service-icon { width: 47px; height: 43px; }
+  .service-icon-truck { width: 59px; }
+  .service-icon-sofa { width: 55px; }
+  .service-popular {
+    grid-column: 1 / -1;
+    height: 82px;
+    flex-direction: row;
+    gap: 14px;
+    font-size: 17px;
+  }
+  .service-popular .service-icon { width: 66px; height: 55px; }
+  .popular-label { right: 16px; font-size: 11px; }
+  .calculator-form { grid-template-columns: 1fr; }
+  .calculator-form .input-wrap:first-child,
+  .calculator-form .input-wrap:nth-child(4),
+  .calculator-form .calculator-submit { grid-column: auto; }
+  .demolition-banner { height: 280px; }
+}
