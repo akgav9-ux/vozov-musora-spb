@@ -175,13 +175,48 @@ async function handleTelegramUpdate(update) {
       });
       return;
     }
-    await telegram("answerCallbackQuery", { callback_query_id: callback.id, text: "Заказ закреплён за вами!" });
+    try {
+      await telegram("sendMessage", {
+        chat_id: executorId,
+        text: [
+          `✅ Вы забрали заказ #${orderId}`,
+          `Услуга: ${claimed[0].service}`,
+          `Имя клиента: ${claimed[0].customer_name}`,
+          `Телефон: ${claimed[0].phone}`,
+          `Адрес: ${claimed[0].address || "не указан"}`,
+          `Объём: ${claimed[0].volume || "не указан"}`,
+          `Цена: ${claimed[0].price_estimate || "уточнить у диспетчера"}`,
+          "",
+          "Свяжитесь с диспетчером для подтверждения заказа.",
+        ].join("\\n"),
+      });
+    } catch (dmError) {
+      await supabase(
+        `/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}&claimed_by_telegram_id=eq.${executorId}&status=eq.claimed`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            status: "new",
+            claimed_by_telegram_id: null,
+            claimed_by_username: null,
+            updated_at: new Date().toISOString(),
+          }),
+        },
+      );
+      await telegram("answerCallbackQuery", {
+        callback_query_id: callback.id,
+        text: "Сначала откройте @VozovMusoraSPB247_bot и нажмите START. Затем снова возьмите заказ.",
+        show_alert: true,
+      });
+      return;
+    }
+    await telegram("answerCallbackQuery", { callback_query_id: callback.id, text: "Заказ закреплён! Контакты отправлены вам в личные сообщения." });
     const message = callback.message;
     if (message) {
       await telegram("editMessageText", {
         chat_id: message.chat.id,
         message_id: message.message_id,
-        text: `✅ ЗАКАЗ #${orderId} ВЗЯТ\nИсполнитель: ${username}\nТелефон клиента: ${claimed[0].phone}\nАдрес: ${claimed[0].address || "уточнить у диспетчера"}`,
+        text: `✅ ЗАКАЗ #${orderId} ВЗЯТ\nИсполнитель: ${username}\nКонтакты клиента отправлены исполнителю в личные сообщения.`,
       });
     }
   } catch (error) {
