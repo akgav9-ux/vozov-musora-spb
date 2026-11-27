@@ -745,6 +745,74 @@ function ReviewsContent({
   );
 }
 
+
+const vehiclePrices = [
+  { group: "Газели", name: "Газель · 1 м³", capacity: "до 500 кг · погрузка 1 ч", price: 4000, loaders: "1 этаж: +500 ₽ · 2 этаж / лифт: +800 ₽ · этаж без лифта: +300 ₽" },
+  { group: "Газели", name: "Газель · 3 м³", capacity: "до 1 т · погрузка 1 ч", price: 5000, loaders: "1 этаж: +1 200 ₽ · 2 этаж / лифт: +1 700 ₽ · этаж без лифта: +700 ₽" },
+  { group: "Газели", name: "Газель · 6 м³", capacity: "до 1,5 т · погрузка 1 ч", price: 7000, loaders: "1 этаж: +1 700 ₽ · 2 этаж / лифт: +2 200 ₽ · этаж без лифта: +1 000 ₽" },
+  { group: "Газели", name: "Газель · 9 м³", capacity: "до 2 т · погрузка 1 ч", price: 10000, loaders: "1 этаж: +2 000 ₽ · 2 этаж / лифт: +3 000 ₽ · этаж без лифта: +1 000 ₽" },
+  { group: "Газели", name: "Газель · 12 м³", capacity: "до 3 т · погрузка 1 ч", price: 12500, loaders: "1 этаж: +2 500 ₽ · 2 этаж / лифт: +3 500 ₽ · этаж без лифта: +1 500 ₽" },
+  { group: "Газели", name: "Газель · 16 м³", capacity: "до 3 т · погрузка 1 ч", price: 16000, loaders: "1 этаж: +2 700 ₽ · 2 этаж / лифт: +4 500 ₽ · этаж без лифта: +2 000 ₽" },
+  { group: "BAW Fenix и FOTON", name: "BAW Fenix · 10 м³", capacity: "до 3 т · погрузка 1 ч", price: 15000, loaders: "Грузчики (с земли): +5 500 ₽" },
+  { group: "BAW Fenix и FOTON", name: "BAW Fenix · 12 м³", capacity: "до 4 т · погрузка 1 ч", price: 16000, loaders: "Грузчики (с земли): +5 500 ₽" },
+  { group: "BAW Fenix и FOTON", name: "BAW Fenix · 16 м³", capacity: "до 4,5 т · погрузка 1 ч", price: 17500, loaders: "Грузчики (с земли): +5 500 ₽" },
+  { group: "BAW Fenix и FOTON", name: "FOTON · 10 м³", capacity: "до 3 т · погрузка 1 ч", price: 15000, loaders: "Грузчики (с земли): +5 500 ₽" },
+  { group: "BAW Fenix и FOTON", name: "FOTON · 16 м³", capacity: "до 4,5 т · погрузка 1 ч", price: 17500, loaders: "Грузчики (с земли): +5 500 ₽" },
+  { group: "Контейнеры и пухто", name: "Двухрамник для перегруза · 6 м³", capacity: "до 3,5 т · погрузка 30 мин", price: 10500, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Камаз с пухто · 6 м³", capacity: "до 3,5 т · погрузка 1 ч", price: 19500, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Камаз с пухто · 10 м³", capacity: "до 4 т · погрузка 1 ч", price: 21000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Камаз с пухто · 10 м³", capacity: "до 10 т · погрузка 1 ч", price: 23000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Пересыпать пухто · 14 м³", capacity: "до 3 т · погрузка 30 мин", price: 20000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Камаз с пухто под погрузку · 14 м³", capacity: "до 6 т · погрузка 2 ч", price: 22000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Пухто на базе Камаза · 20 м³", capacity: "до 10 т · погрузка 3 ч", price: 28500, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Пухто на базе Камаза · 27 м³", capacity: "до 10 т · погрузка 3 ч", price: 30500, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Пухто Мамонт / FAW · 27 м³", capacity: "до 20 т · погрузка 3 ч", price: 33000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Пухто на базе FAW · 36 м³", capacity: "до 20 т · погрузка 3 ч", price: 41000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Самосвалы", name: "Самосвал · 18 м³", capacity: "до 25 т · погрузка 2 ч", price: 26000, loaders: "Для сыпучих грузов · без грузчиков" },
+  { group: "Самосвалы", name: "Самосвал · 20 м³", capacity: "до 35 т · погрузка 2 ч", price: 27000, loaders: "Для сыпучих грузов · без грузчиков" },
+];
+
+function PricePage() {
+  const groups = [...new Set(vehiclePrices.map((item) => item.group))];
+  return (
+    <main className="standalone-prices">
+      <header className="standalone-prices-header">
+        <a className="brand" href="/">
+          <span className="brand-mark"><RecycleMark /></span>
+          <span className="brand-name">ВывозМусора<span>СПб</span></span>
+        </a>
+        <a className="button button-outline" href="/"> <ArrowLeft /> На главную</a>
+      </header>
+      <section className="standalone-prices-content">
+        <p className="eyebrow">ВЫВОЗ МУСОРА · САНКТ-ПЕТЕРБУРГ И ОБЛАСТЬ</p>
+        <h1>Смета и цены на вывоз</h1>
+        <p className="standalone-prices-lead">Выберите подходящую технику. Указана базовая стоимость подачи и вывоза; дополнительные работы и условия погрузки согласуются при оформлении заказа.</p>
+        {groups.map((group) => (
+          <section className="vehicle-price-group" key={group}>
+            <h2>{group}</h2>
+            <div className="vehicle-price-list">
+              {vehiclePrices.filter((item) => item.group === group).map((item, index) => (
+                <article className="vehicle-price-card" key={item.name + item.capacity + index}>
+                  <div className="vehicle-price-main">
+                    <div>
+                      <h3>{item.name}</h3>
+                      <p>{item.capacity}</p>
+                    </div>
+                    <strong>{money(item.price)} ₽</strong>
+                  </div>
+                  <p className="vehicle-price-loaders">{item.loaders}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+        <p className="standalone-prices-note"><ShieldCheck /> Цены указаны по действующей смете. Итоговая стоимость может зависеть от фактического объёма, состава отходов, адреса и условий погрузки. Все изменения согласуются с заказчиком заранее.</p>
+        <a className="button button-yellow standalone-prices-cta" href="/#prices">Вернуться на сайт <ArrowRight /></a>
+      </section>
+    </main>
+  );
+}
+
 export default function App() {
   const [modal, setModal] = useState<ModalState>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -998,6 +1066,8 @@ export default function App() {
       </nav>
     );
   }
+
+  if (window.location.pathname === "/prices") return <PricePage />;
 
   return (
     <>
@@ -1294,12 +1364,9 @@ export default function App() {
                 <br className="desktop-break" /> и типа мусора. Уточняйте цену
                 <br className="desktop-break" /> у менеджера.
               </p>
-              <button
-                className="button button-outline"
-                onClick={() => setModal({ type: "prices" })}
-              >
+              <a className="button button-outline" href="/prices">
                 Перейти к ценам <ArrowRight />
-              </button>
+              </a>
             </div>
             <div className="price-grid">
               {prices.map((price) => (
