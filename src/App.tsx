@@ -324,6 +324,10 @@ function RequestForm({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState(quote?.phone || "");
   const [address, setAddress] = useState(quote?.address || "");
+  const [volumeText, setVolumeText] = useState(
+    prices.find((price) => price.volume === (quote?.volume || volume))?.title || "",
+  );
+  const [details, setDetails] = useState("");
   const [service, setService] = useState(initialService);
   const [phoneError, setPhoneError] = useState(false);
   const [ready, setReady] = useState(false);
@@ -335,7 +339,7 @@ function RequestForm({
   );
   const serviceName =
     services.find((item) => item.id === service)?.title || "Вывоз мусора";
-  const message = `Здравствуйте! Хочу заказать услугу: ${serviceName}.\nИмя: ${name}.\nТелефон: ${phone}.\nАдрес: ${address || "уточню у диспетчера"}.${selectedVolume ? `\nОбъём: ${selectedVolume.title}.` : ""}${quote ? `\nПредварительный расчёт: от ${money(quote.price)} ₽.` : ""}`;
+  const message = `Здравствуйте! Хочу заказать услугу: ${serviceName}.\nИмя: ${name}.\nТелефон: ${phone}.\nАдрес: ${address || "уточню у диспетчера"}.\nПримерный объём: ${volumeText || "не указан"}.\nЧто именно нужно вывезти: ${details || "не указано"}.${quote ? `\nПредварительный расчёт: от ${money(quote.price)} ₽.` : ""}`;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -354,7 +358,8 @@ function RequestForm({
           phone,
           address,
           service: serviceName,
-          volume: selectedVolume?.title || "",
+          volume: volumeText,
+          details,
           priceEstimate: quote ? `от ${money(quote.price)} ₽` : selectedVolume ? `от ${money(selectedVolume.price)} ₽` : "",
         }),
       });
@@ -394,6 +399,8 @@ function RequestForm({
               {address}
             </span>
           )}
+          {volumeText && <span>Примерный объём: {volumeText}</span>}
+          {details && <span>Что вывезти: {details}</span>}
           <span>
             <Phone size={16} />
             {phone}
@@ -485,6 +492,26 @@ function RequestForm({
           value={address}
           onChange={(event) => setAddress(event.target.value)}
           autoComplete="street-address"
+        />
+      </label>
+      <label>
+        Примерный объём или количество
+        <input
+          placeholder="Например: 10 мешков, 1 холодильник, 2 м³"
+          value={volumeText}
+          onChange={(event) => setVolumeText(event.target.value)}
+          maxLength={200}
+        />
+      </label>
+      <label>
+        Что именно нужно вывезти? Укажите подробности
+        <textarea
+          placeholder="Например: старый двухкамерный холодильник; или пианино со 2-го этажа; или строительный мусор в 15 мешках. Укажите этаж, наличие лифта, разборку и другие важные детали."
+          value={details}
+          onChange={(event) => setDetails(event.target.value)}
+          rows={4}
+          maxLength={2000}
+          required
         />
       </label>
       <label className="consent">
