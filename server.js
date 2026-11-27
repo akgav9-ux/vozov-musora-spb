@@ -256,7 +256,7 @@ async function handleTelegramUpdate(update) {
             `Объём: ${claimed[0].volume || "не указан"}`,
             `Цена: ${claimed[0].price_estimate || "уточнить"}`,
             "Телефон исполнителя: ожидается — исполнитель может отправить его кнопкой в личном чате с ботом.",
-          ].join("\\n"),
+          ].join("\n"),
         });
       } catch (adminError) {
         console.error("Admin notification failed:", adminError.message);
