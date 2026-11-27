@@ -135,8 +135,7 @@ async function createOrder(req, res) {
   } catch (error) {
     console.error("Order creation failed:", error.message);
     return json(res, 500, {
-      error: "Не удалось принять заявку. Попробуйте ещё раз или позвоните диспетчеру.",
-      diagnostic: String(error.message || "Unknown error").slice(0, 500),
+      error: `Ошибка сохранения заявки: ${String(error.message || "Unknown error").slice(0, 500)}`,
     });
   }
 }
