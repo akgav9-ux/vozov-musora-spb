@@ -95,7 +95,7 @@ async function createOrder(req, res) {
   const price_estimate = String(input.priceEstimate || "").trim();
 
   if (customer_name.length < 2 || customer_name.length > 70 ||
-      phone.replace(/\\D/g, "").length !== 11 ||
+      phone.replace(/\D/g, "").length !== 11 ||
       address.length > 300 || service.length < 2 || service.length > 200 ||
       volume.length > 100 || price_estimate.length > 100) {
     return json(res, 400, { error: "Проверьте имя, телефон и услугу." });
