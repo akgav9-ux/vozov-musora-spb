@@ -227,7 +227,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && req.url === "/api/orders") return createOrder(req, res);
   if (req.method === "POST" && req.url === "/api/telegram/webhook") {
     const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
-    if (expected && req.headers["x-telegram-bot-api-secret-token"] !== expected) {
+    if (!expected || req.headers["x-telegram-bot-api-secret-token"] !== expected) {
       return json(res, 401, { error: "Unauthorized" });
     }
     try {
@@ -243,6 +243,20 @@ const server = http.createServer(async (req, res) => {
   return json(res, 405, { error: "Method not allowed" });
 });
 
-server.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, "0.0.0.0", async () => {
   console.log(`Vozov app server listening on 0.0.0.0:${PORT}`);
+  const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL;
+  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (webhookUrl && webhookSecret && process.env.TELEGRAM_BOT_TOKEN) {
+    try {
+      await telegram("setWebhook", {
+        url: webhookUrl,
+        secret_token: webhookSecret,
+        allowed_updates: ["message", "callback_query"],
+      });
+      console.log("Telegram webhook configured.");
+    } catch (error) {
+      console.error("Telegram webhook setup failed:", error.message);
+    }
+  }
 });
