@@ -134,7 +134,10 @@ async function createOrder(req, res) {
     return json(res, 201, { ok: true, orderId: order.id, telegramSent });
   } catch (error) {
     console.error("Order creation failed:", error.message);
-    return json(res, 500, { error: "Не удалось принять заявку. Попробуйте ещё раз или позвоните диспетчеру." });
+    return json(res, 500, {
+      error: "Не удалось принять заявку. Попробуйте ещё раз или позвоните диспетчеру.",
+      diagnostic: String(error.message || "Unknown error").slice(0, 500),
+    });
   }
 }
 
