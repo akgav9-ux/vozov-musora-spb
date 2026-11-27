@@ -399,7 +399,7 @@ function RequestForm({
           Изменить заявку
         </button>
         <small>
-          Или позвоните: <a href="tel:+78121234567">+7 (812) 123-45-67</a>
+          Или позвоните: <a href="tel:+79673448484">+7 (967) 344-84-84</a>
         </small>
       </motion.div>
     );
@@ -923,7 +923,7 @@ export default function App() {
         <p>
           Вы можете отозвать согласие, уточнить или попросить удалить переданные
           сведения, связавшись по телефону{" "}
-          <a href="tel:+78121234567">+7 (812) 123-45-67</a>.
+          <a href="tel:+79673448484">+7 (967) 344-84-84</a>.
         </p>
       </div>
     );
@@ -1004,10 +1004,10 @@ export default function App() {
             </div>
             {navLinks}
           </nav>
-          <a className="header-phone phone-link" href="tel:+78121234567">
+          <a className="header-phone phone-link" href="tel:+79673448484">
             <Phone fill="currentColor" />
             <span>
-              <strong>+7 (812) 123-45-67</strong>
+              <strong>+7 (967) 344-84-84</strong>
               <small>Звоните круглосуточно</small>
             </span>
           </a>
@@ -1046,9 +1046,9 @@ export default function App() {
                 Услуги
               </a>
               {navLinks}
-              <a href="tel:+78121234567" className="mobile-nav-phone">
+              <a href="tel:+79673448484" className="mobile-nav-phone">
                 <Phone size={19} />
-                +7 (812) 123-45-67
+                +7 (967) 344-84-84
               </a>
               <a
                 className="button button-yellow"
@@ -1324,10 +1324,10 @@ export default function App() {
               <a href="#reviews">Отзывы</a>
               <a href="#contacts">Контакты</a>
             </nav>
-            <a className="footer-phone phone-link" href="tel:+78121234567">
+            <a className="footer-phone phone-link" href="tel:+79673448484">
               <Phone fill="currentColor" />
               <span>
-                <strong>+7 (812) 123-45-67</strong>
+                <strong>+7 (967) 344-84-84</strong>
                 <small>Круглосуточно</small>
               </span>
             </a>
@@ -1343,7 +1343,7 @@ export default function App() {
               </a>
               <a
                 className="social-telegram"
-                href="https://t.me/share/url?url=https%3A%2F%2Fwa.me%2F78121234567&text=%D0%92%D1%8B%D0%B2%D0%BE%D0%B7%20%D0%BC%D1%83%D1%81%D0%BE%D1%80%D0%B0%20%D0%A1%D0%9F%D0%B1"
+                href="https://t.me/share/url?url=https%3A%2F%2Fwa.me%2F79673448484&text=%D0%92%D1%8B%D0%B2%D0%BE%D0%B7%20%D0%BC%D1%83%D1%81%D0%BE%D1%80%D0%B0%20%D0%A1%D0%9F%D0%B1"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Поделиться контактом в Telegram"
@@ -1352,7 +1352,7 @@ export default function App() {
               </a>
               <a
                 className="social-vk"
-                href="https://vk.com/share.php?url=https%3A%2F%2Fwa.me%2F78121234567&title=%D0%92%D1%8B%D0%B2%D0%BE%D0%B7%D0%9C%D1%83%D1%81%D0%BE%D1%80%D0%B0%20%D0%A1%D0%9F%D0%B1"
+                href="https://vk.com/share.php?url=https%3A%2F%2Fwa.me%2F79673448484&title=%D0%92%D1%8B%D0%B2%D0%BE%D0%B7%D0%9C%D1%83%D1%81%D0%BE%D1%80%D0%B0%20%D0%A1%D0%9F%D0%B1"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Поделиться контактом ВКонтакте"
