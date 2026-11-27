@@ -327,6 +327,9 @@ function RequestForm({
   const [service, setService] = useState(initialService);
   const [phoneError, setPhoneError] = useState(false);
   const [ready, setReady] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [telegramSent, setTelegramSent] = useState(false);
   const selectedVolume = prices.find(
     (price) => price.volume === (quote?.volume || volume),
   );
@@ -334,27 +337,36 @@ function RequestForm({
     services.find((item) => item.id === service)?.title || "Вывоз мусора";
   const message = `Здравствуйте! Хочу заказать услугу: ${serviceName}.\nИмя: ${name}.\nТелефон: ${phone}.\nАдрес: ${address || "уточню у диспетчера"}.${selectedVolume ? `\nОбъём: ${selectedVolume.title}.` : ""}${quote ? `\nПредварительный расчёт: от ${money(quote.price)} ₽.` : ""}`;
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (phone.replace(/\D/g, "").length !== 11) {
       setPhoneError(true);
       return;
     }
+    setSubmitting(true);
+    setSubmitError("");
     try {
-      localStorage.setItem(
-        "spb-request-draft",
-        JSON.stringify({
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
           name,
           phone,
           address,
-          service,
-          createdAt: new Date().toISOString(),
+          service: serviceName,
+          volume: selectedVolume?.title || "",
+          priceEstimate: quote ? `от ${money(quote.price)} ₽` : selectedVolume ? `от ${money(selectedVolume.price)} ₽` : "",
         }),
-      );
-    } catch {
-      /* Keep the form usable if browser storage is unavailable. */
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || "Не удалось отправить заявку.");
+      setTelegramSent(Boolean(result.telegramSent));
+      setReady(true);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Ошибка отправки. Попробуйте ещё раз.");
+    } finally {
+      setSubmitting(false);
     }
-    setReady(true);
   };
 
   if (ready)
@@ -370,8 +382,9 @@ function RequestForm({
         </span>
         <h3>{name}, ваша заявка готова!</h3>
         <p>
-          Отправьте её диспетчеру в WhatsApp. Мы уточним детали, подтвердим цену
-          и согласуем время подачи машины.
+          {telegramSent
+            ? "Заявка передана диспетчеру. Мы свяжемся с вами, уточним детали и согласуем время подачи машины."
+            : "Заявка сохранена. Если вам нужно срочно оформить вывоз, позвоните диспетчеру по указанному ниже номеру."}
         </p>
         <div className="request-summary">
           <span>{serviceName}</span>
@@ -481,8 +494,9 @@ function RequestForm({
           заявки.
         </span>
       </label>
-      <button className="button button-yellow" type="submit">
-        Подготовить заявку <ArrowRight />
+      {submitError && <p className="field-error" role="alert">{submitError}</p>}
+      <button className="button button-yellow" type="submit" disabled={submitting}>
+        {submitting ? "Отправляем заявку..." : "Отправить заявку"} <ArrowRight />
       </button>
       <p className="form-note">
         <LockKeyhole size={13} /> Без предоплаты. Стоимость согласуем заранее.
