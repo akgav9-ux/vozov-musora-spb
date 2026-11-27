@@ -2581,3 +2581,106 @@ h3 {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Standalone full price-list page */
+.standalone-prices {
+  min-height: 100vh;
+  padding: 28px 24px 70px;
+  background: #f5f8fe;
+}
+.standalone-prices-header {
+  max-width: 1180px;
+  margin: 0 auto 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.standalone-prices-content {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.standalone-prices-content > h1 {
+  margin: 8px 0 12px;
+  color: #0e3471;
+  font-size: clamp(32px, 5vw, 52px);
+  letter-spacing: -1.5px;
+}
+.standalone-prices-lead {
+  max-width: 760px;
+  margin-bottom: 36px;
+  color: #647897;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.vehicle-price-group {
+  margin: 34px 0;
+}
+.vehicle-price-group > h2 {
+  margin-bottom: 14px;
+  color: #123b78;
+  font-size: 25px;
+}
+.vehicle-price-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.vehicle-price-card {
+  padding: 19px 21px;
+  border: 1px solid #dce6f5;
+  border-radius: 14px;
+  background: #fff;
+}
+.vehicle-price-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 15px;
+}
+.vehicle-price-main h3 {
+  color: #153d79;
+  font-size: 17px;
+  line-height: 1.35;
+}
+.vehicle-price-main p,
+.vehicle-price-loaders {
+  color: #6d7f9c;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.vehicle-price-main p { margin-top: 5px; }
+.vehicle-price-main > strong {
+  color: #0e3471;
+  font-size: 21px;
+  white-space: nowrap;
+}
+.vehicle-price-loaders {
+  padding-top: 12px;
+  margin-top: 13px;
+  border-top: 1px solid #e5ebf5;
+}
+.standalone-prices-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 900px;
+  margin: 38px 0 24px;
+  color: #647897;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.standalone-prices-note svg { flex: 0 0 24px; color: #159653; }
+.standalone-prices-cta { display: inline-flex; }
+@media (max-width: 700px) {
+  .standalone-prices { padding: 18px 16px 48px; }
+  .standalone-prices-header { margin-bottom: 35px; }
+  .standalone-prices-header .brand-name { font-size: 17px; }
+  .standalone-prices-header .button { min-height: 39px; padding: 8px 10px; font-size: 12px; }
+  .standalone-prices-content > h1 { font-size: 34px; }
+  .standalone-prices-lead { font-size: 14px; }
+  .vehicle-price-list { grid-template-columns: 1fr; }
+  .vehicle-price-card { padding: 16px; }
+  .vehicle-price-main h3 { font-size: 15px; }
+  .vehicle-price-main > strong { font-size: 18px; }
+}
