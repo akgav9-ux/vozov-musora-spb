@@ -42,7 +42,7 @@ async function supabase(pathname, options = {}) {
     ...options,
     headers: {
       apikey: key,
-      authorization: `Bearer ${key}`,
+      ...(key.startsWith("sb_secret_") ? {} : { authorization: `Bearer ${key}` }),
       "content-type": "application/json",
       ...(options.headers || {}),
     },
