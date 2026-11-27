@@ -155,7 +155,7 @@ async function handleTelegramUpdate(update) {
           `Telegram: ${update.message.from.username ? "@" + update.message.from.username : "username не указан"}`,
           `Telegram ID: ${senderId}`,
           `Телефон: ${contact.phone_number}`,
-        ].join("\\n"),
+        ].join("\n"),
       });
       await telegram("sendMessage", {
         chat_id: senderId,
@@ -214,7 +214,13 @@ async function handleTelegramUpdate(update) {
           `Цена: ${claimed[0].price_estimate || "уточнить у диспетчера"}`,
           "",
           "Свяжитесь с диспетчером для подтверждения заказа.",
+          "Чтобы диспетчер мог связаться с вами, при желании отправьте свой номер кнопкой ниже.",
         ].join("\n"),
+        reply_markup: {
+          keyboard: [[{ text: "📞 Отправить мой номер диспетчеру", request_contact: true }]],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        },
       });
     } catch (dmError) {
       await supabase(
