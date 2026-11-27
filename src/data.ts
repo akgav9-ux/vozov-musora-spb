@@ -224,4 +224,4 @@ export function formatPhone(value: string) {
 
 export const whatsappUrl = (
   message = "Здравствуйте! Хочу заказать вывоз мусора в Санкт-Петербурге.",
-) => `https://wa.me/78121234567?text=${encodeURIComponent(message)}`;
+) => `https://wa.me/79673448484?text=${encodeURIComponent(message)}`;
