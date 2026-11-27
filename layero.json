@@ -1,0 +1,7 @@
+{
+  "runtime": "node_web",
+  "framework": "vite",
+  "startCommand": "node server.js",
+  "port": 3000,
+  "nodeVersion": "22"
+}
