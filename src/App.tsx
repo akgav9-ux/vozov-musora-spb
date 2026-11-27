@@ -181,7 +181,7 @@ function Calculator({ onRequest }: { onRequest: (quote: Quote) => void }) {
       type,
       volume,
       phone,
-      price: Math.round(((basePrices[volume] || 1500) * surcharge) / 100) * 100,
+      price: Math.max(2000, Math.round(((basePrices[volume] || 2000) * surcharge) / 100) * 100),
     });
   };
 
@@ -337,8 +337,15 @@ function RequestForm({
   const selectedVolume = prices.find(
     (price) => price.volume === (quote?.volume || volume),
   );
-  const serviceName =
-    services.find((item) => item.id === service)?.title || "Вывоз мусора";
+  const selectedService = services.find((item) => item.id === service);
+  const serviceName = selectedService?.title || "Вывоз мусора";
+  const estimateLabel = quote
+    ? `от ${money(Math.max(2000, quote.price))} ₽`
+    : selectedVolume
+      ? `от ${money(Math.max(2000, selectedVolume.price))} ₽`
+      : selectedService?.price === "Индивидуальный расчёт"
+        ? "Индивидуальный расчёт (минимальный заказ 2 000 ₽)"
+        : selectedService?.price || "от 2 000 ₽";
   const message = `Здравствуйте! Хочу заказать услугу: ${serviceName}.\nИмя: ${name}.\nТелефон: ${phone}.\nАдрес: ${address || "уточню у диспетчера"}.\nПримерный объём: ${volumeText || "не указан"}.\nЧто именно нужно вывезти: ${details || "не указано"}.${quote ? `\nПредварительный расчёт: от ${money(quote.price)} ₽.` : ""}`;
 
   const submit = async (event: FormEvent) => {
@@ -360,7 +367,7 @@ function RequestForm({
           service: serviceName,
           volume: volumeText,
           details,
-          priceEstimate: quote ? `от ${money(quote.price)} ₽` : selectedVolume ? `от ${money(selectedVolume.price)} ₽` : "",
+          priceEstimate: estimateLabel,
         }),
       });
       const result = await response.json();
@@ -405,7 +412,7 @@ function RequestForm({
             <Phone size={16} />
             {phone}
           </span>
-          {quote && <strong>Предварительно: от {money(quote.price)} ₽</strong>}
+          <strong>Предварительная стоимость: {estimateLabel}</strong>
         </div>
         <a
           className="button button-yellow"
@@ -430,12 +437,14 @@ function RequestForm({
         Расскажите, что нужно вывезти. Подберём машину и подготовим заявку для
         диспетчера.
       </p>
-      {selectedVolume && (
-        <p className="selected-order">
-          <Box size={19} /> {selectedVolume.title}{" "}
-          <strong>от {money(quote?.price || selectedVolume.price)} ₽</strong>
-        </p>
-      )}
+      <div className="selected-order">
+        <Box size={19} />
+        <span>Предварительная стоимость</span>
+        <strong>{estimateLabel}</strong>
+      </div>
+      <p className="form-note">
+        Это ориентир до уточнения количества, веса, этажа и условий погрузки. Минимальный заказ — 2 000 ₽.
+      </p>
       <label>
         Ваше имя
         <input
