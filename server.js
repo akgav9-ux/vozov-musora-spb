@@ -141,6 +141,30 @@ async function createOrder(req, res) {
 }
 
 async function handleTelegramUpdate(update) {
+  const adminId = process.env.TELEGRAM_ADMIN_CHAT_ID;
+
+  if (update.message?.contact) {
+    const contact = update.message.contact;
+    const senderId = update.message.from?.id;
+    if (adminId && senderId && contact.user_id === senderId) {
+      await telegram("sendMessage", {
+        chat_id: adminId,
+        text: [
+          "📞 ИСПОЛНИТЕЛЬ ПОДЕЛИЛСЯ НОМЕРОМ",
+          `Имя: ${[update.message.from.first_name, update.message.from.last_name].filter(Boolean).join(" ") || "не указано"}`,
+          `Telegram: ${update.message.from.username ? "@" + update.message.from.username : "username не указан"}`,
+          `Telegram ID: ${senderId}`,
+          `Телефон: ${contact.phone_number}`,
+        ].join("\\n"),
+      });
+      await telegram("sendMessage", {
+        chat_id: senderId,
+        text: "Спасибо! Ваш номер передан диспетчеру.",
+      });
+    }
+    return;
+  }
+
   if (update.message?.text === "/chatid" || update.message?.text?.startsWith("/chatid@")) {
     await telegram("sendMessage", {
       chat_id: update.message.chat.id,
@@ -211,6 +235,26 @@ async function handleTelegramUpdate(update) {
         show_alert: true,
       });
       return;
+    }
+    if (adminId) {
+      try {
+        await telegram("sendMessage", {
+          chat_id: adminId,
+          text: [
+            `🔔 ИСПОЛНИТЕЛЬ ВЗЯЛ ЗАКАЗ #${orderId}`,
+            `Исполнитель: ${username}`,
+            `Telegram ID: ${executorId}`,
+            `Telegram: ${callback.from.username ? "https://t.me/" + callback.from.username : "username не указан"}`,
+            `Услуга: ${claimed[0].service}`,
+            `Адрес: ${claimed[0].address || "не указан"}`,
+            `Объём: ${claimed[0].volume || "не указан"}`,
+            `Цена: ${claimed[0].price_estimate || "уточнить"}`,
+            "Телефон исполнителя: ожидается — исполнитель может отправить его кнопкой в личном чате с ботом.",
+          ].join("\\n"),
+        });
+      } catch (adminError) {
+        console.error("Admin notification failed:", adminError.message);
+      }
     }
     await telegram("answerCallbackQuery", { callback_query_id: callback.id, text: "Заказ закреплён! Контакты отправлены вам в личные сообщения." });
     const message = callback.message;
