@@ -188,7 +188,7 @@ async function handleTelegramUpdate(update) {
           `Цена: ${claimed[0].price_estimate || "уточнить у диспетчера"}`,
           "",
           "Свяжитесь с диспетчером для подтверждения заказа.",
-        ].join("\\n"),
+        ].join("\n"),
       });
     } catch (dmError) {
       await supabase(
