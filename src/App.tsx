@@ -48,6 +48,7 @@ interface Quote {
   type: string;
   volume: string;
   phone: string;
+  details: string;
   price: number;
 }
 
@@ -157,11 +158,21 @@ function ReviewCard({ review }: { review: Review }) {
 
 function Calculator({ onRequest }: { onRequest: (quote: Quote) => void }) {
   const [address, setAddress] = useState("");
-  const [type, setType] = useState("");
+  const [type, setType] = useState("construction");
+  const [material, setMaterial] = useState("");
   const [volume, setVolume] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [floor, setFloor] = useState("");
+  const [lift, setLift] = useState("");
+  const [loaders, setLoaders] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
+
+  const typeNames: Record<string, string> = {
+    construction: "Строительный мусор", household: "Бытовой мусор",
+    furniture: "Мебель и техника", demolition: "Демонтаж", container: "Заказ контейнера",
+  };
 
   const calculate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -169,143 +180,116 @@ function Calculator({ onRequest }: { onRequest: (quote: Quote) => void }) {
       setPhoneError(true);
       return;
     }
-    const basePrices: Record<string, number> = {
-      bags: 1500,
-      "8": 7000,
-      "27": 14000,
-      loaders: 2500,
-    };
-    const surcharge = type === "heavy" ? 1.15 : 1;
+    const detailLines = [
+      "Категория: " + typeNames[type],
+      material ? "Что вывозим / материал: " + material : "",
+      quantity ? "Количество: " + quantity : "",
+      volume ? "Контейнер: " + volume + " м³" : "",
+      floor ? "Этаж: " + floor : "",
+      lift ? "Лифт: " + lift : "",
+      loaders ? "Грузчики: " + loaders : "",
+    ].filter(Boolean);
     setQuote({
-      address,
-      type,
-      volume,
-      phone,
-      price: Math.round(((basePrices[volume] || 1500) * surcharge) / 100) * 100,
+      address, type, volume: quantity || (volume ? "Контейнер " + volume + " м³" : "Объём уточняется"),
+      phone, details: detailLines.join("\n"), price: 0,
     });
   };
 
   return (
     <div className="calculator" id="calculator">
       {quote ? (
-        <motion.div
-          className="quote-result"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          aria-live="polite"
-        >
-          <span className="result-check">
-            <CheckCheck />
-          </span>
-          <h3>Ваш расчёт готов!</h3>
-          <p>Предварительная стоимость</p>
-          <strong className="quote-price">от {money(quote.price)} ₽</strong>
-          <p className="quote-address">
-            <MapPin size={15} />
-            {quote.address}
-          </p>
-          <button
-            className="button button-yellow"
-            onClick={() => onRequest(quote)}
-          >
-            Оформить заявку <ArrowRight />
-          </button>
-          <button className="text-button" onClick={() => setQuote(null)}>
-            Изменить данные
-          </button>
-          <small>Точную цену подтвердим до начала работ.</small>
+        <motion.div className="quote-result" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} aria-live="polite">
+          <span className="result-check"><CheckCheck /></span>
+          <h3>Данные для расчёта готовы</h3>
+          <p>Диспетчер уточнит стоимость по объёму, весу и условиям погрузки.</p>
+          <strong className="quote-price">Индивидуальный расчёт</strong>
+          <p className="quote-address"><MapPin size={15} />{quote.address}</p>
+          <button className="button button-yellow" onClick={() => onRequest(quote)}>Продолжить оформление <ArrowRight /></button>
+          <button className="text-button" onClick={() => setQuote(null)}>Изменить данные</button>
+          <small>Никаких неподтверждённых цен — согласуем стоимость до начала работ.</small>
         </motion.div>
       ) : (
         <>
-          <div className="calculator-title">
-            <Timer />
-            <h3>
-              Рассчитайте стоимость
-              <br />
-              за 1 минуту
-            </h3>
-          </div>
+          <div className="calculator-title"><Timer /><h3>Рассчитайте стоимость<br />за 1 минуту</h3></div>
           <form onSubmit={calculate} className="calculator-form">
-            <label className="input-wrap">
-              <MapPin />
-              <input
-                aria-label="Ваш адрес в Санкт-Петербурге"
-                placeholder="Ваш адрес в СПб"
-                required
-                minLength={5}
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                autoComplete="street-address"
-              />
+            <label className="input-wrap"><MapPin />
+              <input aria-label="Адрес" placeholder="Адрес вывоза в СПб или области" required minLength={5}
+                value={address} onChange={(event) => setAddress(event.target.value)} autoComplete="street-address" />
             </label>
-            <label className="input-wrap select-wrap">
-              <Box />
-              <select
-                aria-label="Тип мусора"
-                required
-                value={type}
-                onChange={(event) => setType(event.target.value)}
-              >
-                <option value="" disabled>
-                  Тип мусора
-                </option>
-                <option value="construction">Строительный мусор</option>
-                <option value="household">Бытовой мусор</option>
-                <option value="furniture">Мебель и техника</option>
-                <option value="heavy">Кирпич и бетон</option>
-              </select>
-              <ChevronDown className="select-chevron" />
+            <label className="input-wrap select-wrap"><Box />
+              <select aria-label="Тип услуги" value={type} onChange={(event) => { setType(event.target.value); setMaterial(""); setVolume(""); setQuantity(""); }}>
+                <option value="construction">Строительный мусор</option><option value="household">Бытовой мусор</option>
+                <option value="furniture">Мебель и техника</option><option value="demolition">Демонтаж</option>
+                <option value="container">Заказ контейнера / ПУХТО</option>
+              </select><ChevronDown className="select-chevron" />
             </label>
-            <label className="input-wrap select-wrap">
-              <BarChart3 />
-              <select
-                aria-label="Примерный объём"
-                required
-                value={volume}
-                onChange={(event) => setVolume(event.target.value)}
-              >
-                <option value="" disabled>
-                  Примерный объём
-                </option>
-                <option value="bags">До 10 мешков</option>
-                <option value="8">Контейнер 8 м³</option>
-                <option value="27">Контейнер 27 м³</option>
-                <option value="loaders">Машина с грузчиками</option>
-              </select>
-              <ChevronDown className="select-chevron" />
+            {type === "construction" && <>
+              <label className="input-wrap select-wrap"><Box />
+                <select aria-label="Материал" required value={material} onChange={(event) => setMaterial(event.target.value)}>
+                  <option value="">Выберите материал</option><option>Кирпич и бетон</option><option>Плитка и штукатурка</option>
+                  <option>Дерево</option><option>Гипсокартон</option><option>Смешанный строительный мусор</option><option>Другое</option>
+                </select><ChevronDown className="select-chevron" />
+              </label>
+              <label className="input-wrap"><BarChart3 /><input required placeholder="Объём или количество мешков" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+            </>}
+            {type === "household" && <>
+              <label className="input-wrap select-wrap"><Box />
+                <select value={material} required aria-label="Вид бытового мусора" onChange={(event) => setMaterial(event.target.value)}>
+                  <option value="">Что нужно вывезти?</option><option>Мешки с бытовым мусором</option><option>Коробки и старые вещи</option>
+                  <option>Смешанный бытовой мусор</option><option>Другое</option>
+                </select><ChevronDown className="select-chevron" />
+              </label>
+              <label className="input-wrap"><BarChart3 /><input required placeholder="Количество мешков / коробок или м³" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+            </>}
+            {type === "furniture" && <>
+              <label className="input-wrap select-wrap"><Box />
+                <select value={material} required aria-label="Мебель или техника" onChange={(event) => setMaterial(event.target.value)}>
+                  <option value="">Выберите предмет</option><option>Диван</option><option>Кресло</option><option>Шкаф</option>
+                  <option>Кровать / матрас</option><option>Стол / стулья</option><option>Холодильник</option>
+                  <option>Стиральная машина</option><option>Плита / духовка</option><option>Несколько предметов / другое</option>
+                </select><ChevronDown className="select-chevron" />
+              </label>
+              <label className="input-wrap"><BarChart3 /><input required placeholder="Количество предметов" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+            </>}
+            {type === "demolition" && <>
+              <label className="input-wrap select-wrap"><Box />
+                <select value={material} required aria-label="Что демонтировать" onChange={(event) => setMaterial(event.target.value)}>
+                  <option value="">Что нужно демонтировать?</option><option>Перегородки / стены</option><option>Полы / стяжка</option>
+                  <option>Плитка / сантехника</option><option>Старая мебель / встроенные конструкции</option>
+                  <option>Комплексный демонтаж</option><option>Другое</option>
+                </select><ChevronDown className="select-chevron" />
+              </label>
+              <label className="input-wrap"><BarChart3 /><input required placeholder="Площадь или объём работ (м² / м³)" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+            </>}
+            {type === "container" && <>
+              <label className="input-wrap select-wrap"><BarChart3 />
+                <select required value={volume} aria-label="Объём контейнера" onChange={(event) => setVolume(event.target.value)}>
+                  <option value="">Объём контейнера</option>{["6","8","12","14","20","27"].map((v) => <option key={v} value={v}>{v} м³</option>)}
+                </select><ChevronDown className="select-chevron" />
+              </label>
+              <label className="input-wrap"><Box /><input placeholder="Что будет загружаться в контейнер?" value={material} onChange={(event) => setMaterial(event.target.value)} required /></label>
+            </>}
+            <label className="input-wrap"><BarChart3 /><input placeholder="Этаж (если вынос не нужен — 0)" value={floor} onChange={(event) => setFloor(event.target.value)} /></label>
+            <label className="input-wrap select-wrap"><Box />
+              <select aria-label="Лифт" value={lift} onChange={(event) => setLift(event.target.value)}>
+                <option value="">Наличие лифта</option><option>Грузовой лифт</option><option>Пассажирский лифт</option>
+                <option>Лифта нет</option><option>Не требуется вынос</option>
+              </select><ChevronDown className="select-chevron" />
             </label>
-            <label className={`input-wrap ${phoneError ? "input-error" : ""}`}>
-              <Phone />
-              <input
-                aria-label="Телефон для расчёта"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                required
-                placeholder="+7 (___) ___-__-__"
-                value={phone}
-                aria-invalid={phoneError}
-                onChange={(event) => {
-                  setPhone(formatPhone(event.target.value));
-                  setPhoneError(false);
-                }}
-              />
+            <label className="input-wrap select-wrap"><Box />
+              <select aria-label="Грузчики" value={loaders} onChange={(event) => setLoaders(event.target.value)}>
+                <option value="">Нужны ли грузчики?</option><option>Да, нужны</option>
+                <option>Нет, погрузим самостоятельно</option><option>Нужна консультация</option>
+              </select><ChevronDown className="select-chevron" />
             </label>
-            {phoneError && (
-              <span className="field-error">
-                Введите номер полностью: 11 цифр
-              </span>
-            )}
-            <button
-              type="submit"
-              className="button button-yellow calculator-submit"
-            >
-              Получить расчёт <ArrowRight />
-            </button>
+            <label className={`input-wrap ${phoneError ? "input-error" : ""}`}><Phone />
+              <input aria-label="Телефон" type="tel" inputMode="tel" autoComplete="tel" required placeholder="+7 (___) ___-__-__"
+                value={phone} aria-invalid={phoneError} onChange={(event) => { setPhone(formatPhone(event.target.value)); setPhoneError(false); }} />
+            </label>
+            {phoneError && <span className="field-error">Введите номер полностью: 11 цифр</span>}
+            <button type="submit" className="button button-yellow calculator-submit">Подготовить заявку <ArrowRight /></button>
           </form>
-          <p className="data-safe">
-            <LockKeyhole /> Ваши данные в безопасности
-          </p>
+          <p className="data-safe"><LockKeyhole /> Диспетчер уточнит стоимость до начала работ</p>
         </>
       )}
     </div>
@@ -324,37 +308,61 @@ function RequestForm({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState(quote?.phone || "");
   const [address, setAddress] = useState(quote?.address || "");
+  const [volumeText, setVolumeText] = useState(
+    quote?.volume || prices.find((price) => price.volume === volume)?.title || "",
+  );
+  const [details, setDetails] = useState(quote?.details || "");
   const [service, setService] = useState(initialService);
   const [phoneError, setPhoneError] = useState(false);
   const [ready, setReady] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [telegramSent, setTelegramSent] = useState(false);
   const selectedVolume = prices.find(
     (price) => price.volume === (quote?.volume || volume),
   );
-  const serviceName =
-    services.find((item) => item.id === service)?.title || "Вывоз мусора";
-  const message = `Здравствуйте! Хочу заказать услугу: ${serviceName}.\nИмя: ${name}.\nТелефон: ${phone}.\nАдрес: ${address || "уточню у диспетчера"}.${selectedVolume ? `\nОбъём: ${selectedVolume.title}.` : ""}${quote ? `\nПредварительный расчёт: от ${money(quote.price)} ₽.` : ""}`;
+  const selectedService = services.find((item) => item.id === service);
+  const serviceName = selectedService?.title || "Вывоз мусора";
+  const estimateLabel = quote
+    ? "Стоимость уточнит диспетчер"
+    : selectedVolume
+      ? `от ${money(Math.max(2000, selectedVolume.price))} ₽`
+      : selectedService?.price === "Индивидуальный расчёт"
+        ? "Индивидуальный расчёт"
+        : selectedService?.price || "Стоимость уточнит диспетчер";
+  const message = `Здравствуйте! Хочу заказать услугу: ${serviceName}.\nИмя: ${name}.\nТелефон: ${phone}.\nАдрес: ${address || "уточню у диспетчера"}.\nПримерный объём: ${volumeText || "не указан"}.\nЧто именно нужно вывезти: ${details || "не указано"}.${quote ? `\nПредварительный расчёт: от ${money(quote.price)} ₽.` : ""}`;
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (phone.replace(/\D/g, "").length !== 11) {
       setPhoneError(true);
       return;
     }
+    setSubmitting(true);
+    setSubmitError("");
     try {
-      localStorage.setItem(
-        "spb-request-draft",
-        JSON.stringify({
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
           name,
           phone,
           address,
-          service,
-          createdAt: new Date().toISOString(),
+          service: serviceName,
+          volume: volumeText,
+          details,
+          priceEstimate: estimateLabel,
         }),
-      );
-    } catch {
-      /* Keep the form usable if browser storage is unavailable. */
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || "Не удалось отправить заявку.");
+      setTelegramSent(Boolean(result.telegramSent));
+      setReady(true);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Ошибка отправки. Попробуйте ещё раз.");
+    } finally {
+      setSubmitting(false);
     }
-    setReady(true);
   };
 
   if (ready)
@@ -370,8 +378,9 @@ function RequestForm({
         </span>
         <h3>{name}, ваша заявка готова!</h3>
         <p>
-          Отправьте её диспетчеру в WhatsApp. Мы уточним детали, подтвердим цену
-          и согласуем время подачи машины.
+          {telegramSent
+            ? "Заявка передана диспетчеру. Мы свяжемся с вами, уточним детали и согласуем время подачи машины."
+            : "Заявка сохранена. Если вам нужно срочно оформить вывоз, позвоните диспетчеру по указанному ниже номеру."}
         </p>
         <div className="request-summary">
           <span>{serviceName}</span>
@@ -381,11 +390,13 @@ function RequestForm({
               {address}
             </span>
           )}
+          {volumeText && <span>Примерный объём: {volumeText}</span>}
+          {details && <span>Что вывезти: {details}</span>}
           <span>
             <Phone size={16} />
             {phone}
           </span>
-          {quote && <strong>Предварительно: от {money(quote.price)} ₽</strong>}
+          <strong>Стоимость: {estimateLabel}</strong>
         </div>
         <a
           className="button button-yellow"
@@ -410,12 +421,14 @@ function RequestForm({
         Расскажите, что нужно вывезти. Подберём машину и подготовим заявку для
         диспетчера.
       </p>
-      {selectedVolume && (
-        <p className="selected-order">
-          <Box size={19} /> {selectedVolume.title}{" "}
-          <strong>от {money(quote?.price || selectedVolume.price)} ₽</strong>
-        </p>
-      )}
+      <div className="selected-order">
+        <Box size={19} />
+        <span>Предварительная стоимость</span>
+        <strong>{estimateLabel}</strong>
+      </div>
+      <p className="form-note">
+        Цена пока не рассчитывается автоматически: диспетчер уточнит вес, объём, расстояние и условия погрузки и согласует стоимость заранее.
+      </p>
       <label>
         Ваше имя
         <input
@@ -474,6 +487,26 @@ function RequestForm({
           autoComplete="street-address"
         />
       </label>
+      <label>
+        Примерный объём или количество
+        <input
+          placeholder="Например: 10 мешков, 1 холодильник, 2 м³"
+          value={volumeText}
+          onChange={(event) => setVolumeText(event.target.value)}
+          maxLength={200}
+        />
+      </label>
+      <label>
+        Что именно нужно вывезти? Укажите подробности
+        <textarea
+          placeholder="Например: старый двухкамерный холодильник; или пианино со 2-го этажа; или строительный мусор в 15 мешках. Укажите этаж, наличие лифта, разборку и другие важные детали."
+          value={details}
+          onChange={(event) => setDetails(event.target.value)}
+          rows={4}
+          maxLength={2000}
+          required
+        />
+      </label>
       <label className="consent">
         <input type="checkbox" required defaultChecked />
         <span>
@@ -481,8 +514,9 @@ function RequestForm({
           заявки.
         </span>
       </label>
-      <button className="button button-yellow" type="submit">
-        Подготовить заявку <ArrowRight />
+      {submitError && <p className="field-error" role="alert">{submitError}</p>}
+      <button className="button button-yellow" type="submit" disabled={submitting}>
+        {submitting ? "Отправляем заявку..." : "Отправить заявку"} <ArrowRight />
       </button>
       <p className="form-note">
         <LockKeyhole size={13} /> Без предоплаты. Стоимость согласуем заранее.
@@ -571,7 +605,7 @@ function ReviewsContent({
   onAdd,
 }: {
   reviews: Review[];
-  onAdd: (review: Review) => void;
+  onAdd: (review: Review) => Promise<void>;
 }) {
   const [writing, setWriting] = useState(false);
   const [name, setName] = useState("");
@@ -579,6 +613,8 @@ function ReviewsContent({
   const [rating, setRating] = useState(5);
   const [order, setOrder] = useState("new");
   const [added, setAdded] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const dateNumber = (date: string) =>
     Number(date.split(".").reverse().join(""));
   const averageRating =
@@ -590,20 +626,29 @@ function ReviewsContent({
       : dateNumber(a.date) - dateNumber(b.date),
   );
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    onAdd({
-      id: `local-${Date.now()}`,
-      name: name.trim(),
-      date: new Date().toLocaleDateString("ru-RU"),
-      rating,
-      text: text.trim(),
-    });
-    setWriting(false);
-    setAdded(true);
-    setName("");
-    setText("");
-    setRating(5);
+    if (submitting) return;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      await onAdd({
+        id: "",
+        name: name.trim(),
+        date: new Date().toLocaleDateString("ru-RU"),
+        rating,
+        text: text.trim(),
+      });
+      setWriting(false);
+      setAdded(true);
+      setName("");
+      setText("");
+      setRating(5);
+    } catch {
+      setSubmitError("Не удалось отправить отзыв. Попробуйте ещё раз.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -626,7 +671,7 @@ function ReviewsContent({
       </div>
       {added && (
         <p className="review-added" role="status">
-          <Check size={18} /> Спасибо! Ваш отзыв сохранён в этом браузере.
+          <Check size={18} /> Спасибо! Ваш отзыв отправлен и сохранён.
         </p>
       )}
       {writing && (
@@ -670,8 +715,9 @@ function ReviewsContent({
               rows={3}
             />
           </label>
-          <button className="button button-yellow" type="submit">
-            Опубликовать отзыв <Send size={18} />
+          {submitError && <p className="form-error" role="alert">{submitError}</p>}
+          <button className="button button-yellow" type="submit" disabled={submitting}>
+            {submitting ? "Отправляем..." : "Опубликовать отзыв"} <Send size={18} />
           </button>
         </form>
       )}
@@ -695,34 +741,99 @@ function ReviewsContent({
   );
 }
 
+
+const vehiclePrices = [
+  { group: "Газели", name: "Газель · 1 м³", capacity: "до 500 кг · погрузка 1 ч", price: 4000, loaders: "1 этаж: +500 ₽ · 2 этаж / лифт: +800 ₽ · этаж без лифта: +300 ₽" },
+  { group: "Газели", name: "Газель · 3 м³", capacity: "до 1 т · погрузка 1 ч", price: 5000, loaders: "1 этаж: +1 200 ₽ · 2 этаж / лифт: +1 700 ₽ · этаж без лифта: +700 ₽" },
+  { group: "Газели", name: "Газель · 6 м³", capacity: "до 1,5 т · погрузка 1 ч", price: 7000, loaders: "1 этаж: +1 700 ₽ · 2 этаж / лифт: +2 200 ₽ · этаж без лифта: +1 000 ₽" },
+  { group: "Газели", name: "Газель · 9 м³", capacity: "до 2 т · погрузка 1 ч", price: 10000, loaders: "1 этаж: +2 000 ₽ · 2 этаж / лифт: +3 000 ₽ · этаж без лифта: +1 000 ₽" },
+  { group: "Газели", name: "Газель · 12 м³", capacity: "до 3 т · погрузка 1 ч", price: 12500, loaders: "1 этаж: +2 500 ₽ · 2 этаж / лифт: +3 500 ₽ · этаж без лифта: +1 500 ₽" },
+  { group: "Газели", name: "Газель · 16 м³", capacity: "до 3 т · погрузка 1 ч", price: 16000, loaders: "1 этаж: +2 700 ₽ · 2 этаж / лифт: +4 500 ₽ · этаж без лифта: +2 000 ₽" },
+  { group: "BAW Fenix и FOTON", name: "BAW Fenix · 10 м³", capacity: "до 3 т · погрузка 1 ч", price: 15000, loaders: "Грузчики (с земли): +5 500 ₽" },
+  { group: "BAW Fenix и FOTON", name: "BAW Fenix · 12 м³", capacity: "до 4 т · погрузка 1 ч", price: 16000, loaders: "Грузчики (с земли): +5 500 ₽" },
+  { group: "BAW Fenix и FOTON", name: "BAW Fenix · 16 м³", capacity: "до 4,5 т · погрузка 1 ч", price: 17500, loaders: "Грузчики (с земли): +5 500 ₽" },
+  { group: "BAW Fenix и FOTON", name: "FOTON · 10 м³", capacity: "до 3 т · погрузка 1 ч", price: 15000, loaders: "Грузчики (с земли): +5 500 ₽" },
+  { group: "BAW Fenix и FOTON", name: "FOTON · 16 м³", capacity: "до 4,5 т · погрузка 1 ч", price: 17500, loaders: "Грузчики (с земли): +5 500 ₽" },
+  { group: "Контейнеры и пухто", name: "Двухрамник для перегруза · 6 м³", capacity: "до 3,5 т · погрузка 30 мин", price: 10500, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Камаз с пухто · 6 м³", capacity: "до 3,5 т · погрузка 1 ч", price: 19500, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Камаз с пухто · 10 м³", capacity: "до 4 т · погрузка 1 ч", price: 21000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Камаз с пухто · 10 м³", capacity: "до 10 т · погрузка 1 ч", price: 23000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Пересыпать пухто · 14 м³", capacity: "до 3 т · погрузка 30 мин", price: 20000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Камаз с пухто под погрузку · 14 м³", capacity: "до 6 т · погрузка 2 ч", price: 22000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Пухто на базе Камаза · 20 м³", capacity: "до 10 т · погрузка 3 ч", price: 28500, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Пухто на базе Камаза · 27 м³", capacity: "до 10 т · погрузка 3 ч", price: 30500, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Пухто Мамонт / FAW · 27 м³", capacity: "до 20 т · погрузка 3 ч", price: 33000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Контейнеры и пухто", name: "Пухто на базе FAW · 36 м³", capacity: "до 20 т · погрузка 3 ч", price: 41000, loaders: "Без грузчиков · самостоятельная загрузка в контейнер" },
+  { group: "Самосвалы", name: "Самосвал · 18 м³", capacity: "до 25 т · погрузка 2 ч", price: 26000, loaders: "Для сыпучих грузов · без грузчиков" },
+  { group: "Самосвалы", name: "Самосвал · 20 м³", capacity: "до 35 т · погрузка 2 ч", price: 27000, loaders: "Для сыпучих грузов · без грузчиков" },
+];
+
+function PricePage() {
+  const groups = [...new Set(vehiclePrices.map((item) => item.group))];
+  return (
+    <main className="standalone-prices">
+      <header className="standalone-prices-header">
+        <a className="brand" href="/">
+          <span className="brand-mark"><RecycleMark /></span>
+          <span className="brand-name">ВывозМусора<span>СПб</span></span>
+        </a>
+        <a className="button button-outline" href="/"> <ArrowLeft /> На главную</a>
+      </header>
+      <section className="standalone-prices-content">
+        <p className="eyebrow">ВЫВОЗ МУСОРА · САНКТ-ПЕТЕРБУРГ И ОБЛАСТЬ</p>
+        <h1>Смета и цены на вывоз</h1>
+        <p className="standalone-prices-lead">Выберите подходящую технику. Указана базовая стоимость подачи и вывоза; дополнительные работы и условия погрузки согласуются при оформлении заказа.</p>
+        {groups.map((group) => (
+          <section className="vehicle-price-group" key={group}>
+            <h2>{group}</h2>
+            <div className="vehicle-price-list">
+              {vehiclePrices.filter((item) => item.group === group).map((item, index) => (
+                <article className="vehicle-price-card" key={item.name + item.capacity + index}>
+                  <div className="vehicle-price-main">
+                    <div>
+                      <h3>{item.name}</h3>
+                      <p>{item.capacity}</p>
+                    </div>
+                    <strong>{money(item.price)} ₽</strong>
+                  </div>
+                  <p className="vehicle-price-loaders">{item.loaders}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+        <p className="standalone-prices-note"><ShieldCheck /> Цены указаны по действующей смете. Итоговая стоимость может зависеть от фактического объёма, состава отходов, адреса и условий погрузки. Все изменения согласуются с заказчиком заранее.</p>
+        <a className="button button-yellow standalone-prices-cta" href="/#prices">Вернуться на сайт <ArrowRight /></a>
+      </section>
+    </main>
+  );
+}
+
 export default function App() {
   const [modal, setModal] = useState<ModalState>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
-  const [reviews, setReviews] = useState<Review[]>(() => {
-    try {
-      const saved: unknown = JSON.parse(
-        localStorage.getItem("spb-reviews") || "[]",
-      );
-      const valid = Array.isArray(saved)
-        ? saved.filter(
-            (item): item is Review =>
-              typeof item?.id === "string" &&
-              typeof item?.name === "string" &&
-              typeof item?.text === "string" &&
-              /^\d{2}\.\d{2}\.\d{4}$/.test(item?.date) &&
-              Number.isInteger(item?.rating) &&
-              item.rating >= 1 &&
-              item.rating <= 5,
-          )
-        : [];
-      return [...valid, ...initialReviews];
-    } catch {
-      return initialReviews;
-    }
-  });
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const reduceMotion = useReducedMotion();
   const closeModal = useCallback(() => setModal(null), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/reviews", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Не удалось загрузить отзывы");
+        return response.json();
+      })
+      .then((data: { reviews?: Review[] }) => {
+        if (!cancelled && Array.isArray(data.reviews)) {
+          setReviews([...data.reviews, ...initialReviews]);
+        }
+      })
+      .catch((error) => console.error("Reviews loading failed:", error));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!servicesOpen) return;
@@ -754,17 +865,21 @@ export default function App() {
     setMenuOpen(false);
     setServicesOpen(false);
   };
-  const addReview = (review: Review) => {
-    const updated = [review, ...reviews];
-    setReviews(updated);
-    try {
-      localStorage.setItem(
-        "spb-reviews",
-        JSON.stringify(updated.filter((item) => item.id.startsWith("local-"))),
-      );
-    } catch {
-      /* Reviews remain available for this visit without local storage. */
+  const addReview = async (review: Review) => {
+    const response = await fetch("/api/reviews", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: review.name,
+        rating: review.rating,
+        text: review.text,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.review) {
+      throw new Error(data.error || "Не удалось сохранить отзыв");
     }
+    setReviews((current) => [data.review as Review, ...current]);
   };
 
   const navLinks = (
@@ -948,6 +1063,8 @@ export default function App() {
       </nav>
     );
   }
+
+  if (window.location.pathname === "/prices") return <PricePage />;
 
   return (
     <>
@@ -1181,13 +1298,11 @@ export default function App() {
               setModal({
                 type: "request",
                 service:
-                  quote.type === "furniture"
-                    ? "furniture"
-                    : quote.type === "heavy"
-                      ? "bags"
-                      : quote.volume === "8" || quote.volume === "27"
-                        ? "container"
-                        : "renovation",
+                  quote.type === "furniture" ? "furniture" :
+                  quote.type === "demolition" ? "demolition" :
+                  quote.type === "container" ? "container" :
+                  quote.type === "household" ? "apartment" :
+                  "renovation",
                 quote,
               })
             }
@@ -1244,12 +1359,9 @@ export default function App() {
                 <br className="desktop-break" /> и типа мусора. Уточняйте цену
                 <br className="desktop-break" /> у менеджера.
               </p>
-              <button
-                className="button button-outline"
-                onClick={() => setModal({ type: "prices" })}
-              >
+              <a className="button button-outline" href="/prices">
                 Перейти к ценам <ArrowRight />
-              </button>
+              </a>
             </div>
             <div className="price-grid">
               {prices.map((price) => (
@@ -1343,10 +1455,10 @@ export default function App() {
               </a>
               <a
                 className="social-telegram"
-                href="https://t.me/share/url?url=https%3A%2F%2Fwa.me%2F79673448484&text=%D0%92%D1%8B%D0%B2%D0%BE%D0%B7%20%D0%BC%D1%83%D1%81%D0%BE%D1%80%D0%B0%20%D0%A1%D0%9F%D0%B1"
+                href="https://t.me/VozovMusoraSPB247_bot"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Поделиться контактом в Telegram"
+                aria-label="Открыть бота для оформления заказа в Telegram"
               >
                 <TelegramIcon />
               </a>
