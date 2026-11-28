@@ -282,7 +282,7 @@ function Calculator({ onRequest }: { onRequest: (quote: Quote) => void }) {
                 <option>Нет, погрузим самостоятельно</option><option>Нужна консультация</option>
               </select><ChevronDown className="select-chevron" />
             </label>
-            <label className={\`input-wrap \${phoneError ? "input-error" : ""}\`}><Phone />
+            <label className={`input-wrap ${phoneError ? "input-error" : ""}`}><Phone />
               <input aria-label="Телефон" type="tel" inputMode="tel" autoComplete="tel" required placeholder="+7 (___) ___-__-__"
                 value={phone} aria-invalid={phoneError} onChange={(event) => { setPhone(formatPhone(event.target.value)); setPhoneError(false); }} />
             </label>
