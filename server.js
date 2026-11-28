@@ -143,27 +143,323 @@ async function createOrder(req, res) {
   }
 }
 
+
+
+async function getOrderSession(userId) {
+  const rows = await supabase(
+    \`/rest/v1/telegram_order_sessions?telegram_user_id=eq.\${encodeURIComponent(userId)}&select=*\`,
+  );
+  return rows?.[0] || null;
+}
+
+async function saveOrderSession(userId, chatId, step, data) {
+  await supabase("/rest/v1/telegram_order_sessions?on_conflict=telegram_user_id", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify({
+      telegram_user_id: userId,
+      chat_id: chatId,
+      step,
+      data,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+}
+
+async function deleteOrderSession(userId) {
+  await supabase(\`/rest/v1/telegram_order_sessions?telegram_user_id=eq.\${encodeURIComponent(userId)}\`, {
+    method: "DELETE",
+  });
+}
+
+async function startTelegramOrder(message) {
+  const userId = message.from.id;
+  const chatId = message.chat.id;
+  const data = {
+    customer_name: "",
+    phone: "",
+    address: "",
+    service: "",
+    volume: "",
+    details: "",
+    price_estimate: "",
+    photos: [],
+  };
+  await saveOrderSession(userId, chatId, "name", data);
+  await telegram("sendMessage", {
+    chat_id: chatId,
+    text: "📝 Создадим заявку на вывоз мусора.\\n\\n1/8. Как вас зовут?",
+    reply_markup: { keyboard: [[{ text: "❌ Отменить заявку" }]], resize_keyboard: true },
+  });
+}
+
+async function sendOrderSummary(chatId, userId, data) {
+  await saveOrderSession(userId, chatId, "confirm", data);
+  await telegram("sendMessage", {
+    chat_id: chatId,
+    text: [
+      "📋 ПРОВЕРЬТЕ ЗАЯВКУ",
+      "",
+      \`Имя: \${data.customer_name}\`,
+      \`Телефон: \${data.phone}\`,
+      \`Адрес: \${data.address}\`,
+      \`Услуга: \${data.service}\`,
+      \`Объём: \${data.volume || "не указан"}\`,
+      \`Что нужно вывезти: \${data.details}\`,
+      \`Предварительная стоимость: \${data.price_estimate || "уточнить"}\`,
+      \`Фотографии: \${data.photos?.length || 0} из 5\`,
+      "",
+      "Если всё верно, нажмите «Отправить заявку».",
+    ].join("\\n"),
+    reply_markup: {
+      inline_keyboard: [[
+        { text: "✅ Отправить заявку", callback_data: "bot_order_submit" },
+        { text: "❌ Отменить", callback_data: "bot_order_cancel" },
+      ]],
+    },
+  });
+}
+
+async function finishTelegramOrder(callback) {
+  const userId = callback.from.id;
+  const session = await getOrderSession(userId);
+  if (!session || session.step !== "confirm") {
+    await telegram("answerCallbackQuery", { callback_query_id: callback.id, text: "Заявка не найдена. Начните заново командой /order." , show_alert: true });
+    return;
+  }
+  const data = session.data || {};
+  const rows = await supabase("/rest/v1/orders", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      customer_name: data.customer_name,
+      phone: data.phone,
+      address: data.address,
+      service: data.service,
+      volume: data.volume || null,
+      details: data.details,
+      price_estimate: data.price_estimate || null,
+      photos: data.photos || [],
+    }),
+  });
+  const order = rows?.[0];
+  if (!order) throw new Error("Database did not return the created Telegram order");
+
+  const groupId = process.env.TELEGRAM_GROUP_CHAT_ID;
+  if (!groupId) throw new Error("TELEGRAM_GROUP_CHAT_ID is not configured");
+
+  const photos = Array.isArray(data.photos) ? data.photos.slice(0, 5) : [];
+  if (photos.length === 1) {
+    await telegram("sendPhoto", { chat_id: groupId, photo: photos[0], caption: \`📷 Фото к заявке #\${order.id}\` });
+  } else if (photos.length > 1) {
+    await telegram("sendMediaGroup", {
+      chat_id: groupId,
+      media: photos.map((fileId, index) => ({
+        type: "photo",
+        media: fileId,
+        ...(index === 0 ? { caption: \`📷 Фотографии к заявке #\${order.id}\` } : {}),
+      })),
+    });
+  }
+  const groupMessage = await telegram("sendMessage", {
+    chat_id: groupId,
+    text: orderText(order),
+    reply_markup: {
+      inline_keyboard: [[{ text: "ВЗЯТЬ ЗАКАЗ", callback_data: \`claim:\${order.id}\` }]],
+    },
+  });
+  await supabase(\`/rest/v1/orders?id=eq.\${order.id}\`, {
+    method: "PATCH",
+    body: JSON.stringify({ telegram_message_id: groupMessage.message_id }),
+  });
+  await deleteOrderSession(userId);
+  await telegram("answerCallbackQuery", { callback_query_id: callback.id, text: "Заявка отправлена!" });
+  await telegram("sendMessage", {
+    chat_id: callback.message.chat.id,
+    text: \`✅ Заявка #\${order.id} отправлена диспетчеру. Мы свяжемся с вами.\`,
+    reply_markup: {
+      keyboard: [[{ text: "📝 Создать заявку" }, { text: "📞 Связаться с диспетчером" }]],
+      resize_keyboard: true,
+    },
+  });
+}
+
+async function handleTelegramOrderMessage(message, suppliedPhone = "") {
+  const userId = message.from?.id;
+  const chatId = message.chat?.id;
+  if (!userId || !chatId || message.chat.type !== "private") return false;
+
+  const text = String(message.text || "").trim();
+  if (text === "/start" || text.startsWith("/start ") || text === "/order" ||
+      text.startsWith("/order@") || text === "📝 Создать заявку") {
+    await startTelegramOrder(message);
+    return true;
+  }
+  if (text === "❌ Отменить заявку") {
+    await deleteOrderSession(userId);
+    await telegram("sendMessage", {
+      chat_id: chatId,
+      text: "Заявка отменена. Чтобы создать новую, нажмите «Создать заявку».",
+      reply_markup: { keyboard: [[{ text: "📝 Создать заявку" }]], resize_keyboard: true },
+    });
+    return true;
+  }
+
+  const session = await getOrderSession(userId);
+  if (!session) return false;
+  const data = session.data || {};
+  const value = suppliedPhone || text;
+
+  if (session.step === "name") {
+    if (value.length < 2 || value.length > 70) {
+      await telegram("sendMessage", { chat_id: chatId, text: "Введите имя (от 2 до 70 символов)." });
+      return true;
+    }
+    data.customer_name = value;
+    await saveOrderSession(userId, chatId, "phone", data);
+    await telegram("sendMessage", {
+      chat_id: chatId,
+      text: "2/8. Отправьте номер телефона или нажмите кнопку ниже.",
+      reply_markup: { keyboard: [[{ text: "📱 Отправить номер телефона", request_contact: true }], [{ text: "❌ Отменить заявку" }]], resize_keyboard: true },
+    });
+    return true;
+  }
+  if (session.step === "phone") {
+    const digits = value.replace(/\\D/g, "");
+    if (digits.length < 10 || digits.length > 15) {
+      await telegram("sendMessage", { chat_id: chatId, text: "Введите корректный номер телефона или отправьте свой контакт кнопкой." });
+      return true;
+    }
+    data.phone = value;
+    await saveOrderSession(userId, chatId, "address", data);
+    await telegram("sendMessage", { chat_id: chatId, text: "3/8. Укажите адрес, откуда нужно вывезти мусор." });
+    return true;
+  }
+  if (session.step === "address") {
+    if (value.length < 4 || value.length > 300) {
+      await telegram("sendMessage", { chat_id: chatId, text: "Укажите адрес подробнее." });
+      return true;
+    }
+    data.address = value;
+    await saveOrderSession(userId, chatId, "service", data);
+    await telegram("sendMessage", { chat_id: chatId, text: "4/8. Какая услуга нужна? Например: строительный мусор, мебель, бытовой мусор, демонтаж." });
+    return true;
+  }
+  if (session.step === "service") {
+    if (value.length < 2 || value.length > 200) {
+      await telegram("sendMessage", { chat_id: chatId, text: "Напишите, какая услуга нужна." });
+      return true;
+    }
+    data.service = value;
+    await saveOrderSession(userId, chatId, "volume", data);
+    await telegram("sendMessage", { chat_id: chatId, text: "5/8. Укажите объём работ: количество мешков, кубометры, мебель или размер контейнера." });
+    return true;
+  }
+  if (session.step === "volume") {
+    if (value.length > 200) {
+      await telegram("sendMessage", { chat_id: chatId, text: "Слишком длинный ответ. Укажите объём короче." });
+      return true;
+    }
+    data.volume = value;
+    await saveOrderSession(userId, chatId, "details", data);
+    await telegram("sendMessage", { chat_id: chatId, text: "6/8. Подробно расскажите, что именно нужно вывезти и откуда (этаж, лифт, погрузка)." });
+    return true;
+  }
+  if (session.step === "details") {
+    if (value.length < 3 || value.length > 2000) {
+      await telegram("sendMessage", { chat_id: chatId, text: "Добавьте немного подробностей (от 3 символов)." });
+      return true;
+    }
+    data.details = value;
+    await saveOrderSession(userId, chatId, "price", data);
+    await telegram("sendMessage", { chat_id: chatId, text: "7/8. Укажите предварительную стоимость, если уже знаете. Если нет — напишите «уточнить»." });
+    return true;
+  }
+  if (session.step === "price") {
+    if (value.length > 100) {
+      await telegram("sendMessage", { chat_id: chatId, text: "Укажите стоимость короче." });
+      return true;
+    }
+    data.price_estimate = value.toLowerCase() === "уточнить" ? "" : value;
+    await saveOrderSession(userId, chatId, "photos", data);
+    await telegram("sendMessage", {
+      chat_id: chatId,
+      text: "8/8. Пришлите до 5 фотографий объёма работ. Можно отправить несколько фото по очереди. Когда закончите, нажмите «Готово». Если фото нет — нажмите «Без фото».",
+      reply_markup: { inline_keyboard: [[{ text: "✅ Готово", callback_data: "bot_photos_done" }, { text: "Пропустить фото", callback_data: "bot_photos_skip" }]] },
+    });
+    return true;
+  }
+  if (session.step === "photos") {
+    if (Array.isArray(message.photo) && message.photo.length) {
+      if ((data.photos || []).length >= 5) {
+        await telegram("sendMessage", { chat_id: chatId, text: "Можно добавить максимум 5 фотографий. Нажмите «Готово»." });
+        return true;
+      }
+      data.photos = [...(data.photos || []), message.photo[message.photo.length - 1].file_id].slice(0, 5);
+      await saveOrderSession(userId, chatId, "photos", data);
+      await telegram("sendMessage", {
+        chat_id: chatId,
+        text: \`Фото добавлено: \${data.photos.length}/5. Отправьте ещё или нажмите «Готово».\`,
+        reply_markup: { inline_keyboard: [[{ text: "✅ Готово", callback_data: "bot_photos_done" }]] },
+      });
+      return true;
+    }
+    await telegram("sendMessage", { chat_id: chatId, text: "Пришлите фотографию или нажмите «Готово» / «Пропустить фото»." });
+    return true;
+  }
+  if (session.step === "confirm") {
+    await telegram("sendMessage", { chat_id: chatId, text: "Проверьте заявку выше и нажмите «Отправить заявку» или «Отменить»." });
+    return true;
+  }
+  return false;
+}
+
+async function handleTelegramOrderCallback(callback) {
+  if (!["bot_photos_done", "bot_photos_skip", "bot_order_submit", "bot_order_cancel"].includes(callback.data)) return false;
+  const userId = callback.from.id;
+  if (callback.data === "bot_order_cancel") {
+    await deleteOrderSession(userId);
+    await telegram("answerCallbackQuery", { callback_query_id: callback.id, text: "Заявка отменена." });
+    await telegram("sendMessage", { chat_id: callback.message.chat.id, text: "Заявка отменена. Для новой заявки нажмите /order." });
+    return true;
+  }
+  if (callback.data === "bot_order_submit") {
+    await finishTelegramOrder(callback);
+    return true;
+  }
+  const session = await getOrderSession(userId);
+  if (!session || session.step !== "photos") {
+    await telegram("answerCallbackQuery", { callback_query_id: callback.id, text: "Этап заявки не найден.", show_alert: true });
+    return true;
+  }
+  await sendOrderSummary(session.chat_id, userId, session.data || {});
+  await telegram("answerCallbackQuery", { callback_query_id: callback.id, text: "Проверьте заявку." });
+  return true;
+}
+
 async function handleTelegramUpdate(update) {
   const adminId = process.env.TELEGRAM_ADMIN_CHAT_ID;
 
   if (update.message?.contact) {
     const contact = update.message.contact;
     const senderId = update.message.from?.id;
+    const session = senderId ? await getOrderSession(senderId) : null;
+    if (session?.step === "phone" && contact.user_id === senderId) {
+      await handleTelegramOrderMessage(update.message, contact.phone_number);
+      return;
+    }
     if (adminId && senderId && contact.user_id === senderId) {
       await telegram("sendMessage", {
         chat_id: adminId,
         text: [
           "📞 ИСПОЛНИТЕЛЬ ПОДЕЛИЛСЯ НОМЕРОМ",
-          `Имя: ${[update.message.from.first_name, update.message.from.last_name].filter(Boolean).join(" ") || "не указано"}`,
-          `Telegram: ${update.message.from.username ? "@" + update.message.from.username : "username не указан"}`,
-          `Telegram ID: ${senderId}`,
-          `Телефон: ${contact.phone_number}`,
-        ].join("\n"),
+          \`Имя: \${[update.message.from.first_name, update.message.from.last_name].filter(Boolean).join(" ") || "не указано"}\`,
+          \`Telegram: \${update.message.from.username ? "@" + update.message.from.username : "username не указан"}\`,
+          \`Telegram ID: \${senderId}\`,
+          \`Телефон: \${contact.phone_number}\`,
+        ].join("\\n"),
       });
-      await telegram("sendMessage", {
-        chat_id: senderId,
-        text: "Спасибо! Ваш номер передан диспетчеру.",
-      });
+      await telegram("sendMessage", { chat_id: senderId, text: "Спасибо! Ваш номер передан диспетчеру." });
     }
     return;
   }
@@ -171,20 +467,25 @@ async function handleTelegramUpdate(update) {
   if (update.message?.text === "/chatid" || update.message?.text?.startsWith("/chatid@")) {
     await telegram("sendMessage", {
       chat_id: update.message.chat.id,
-      text: `ID этого чата: ${update.message.chat.id}`,
+      text: \`ID этого чата: \${update.message.chat.id}\`,
       reply_to_message_id: update.message.message_id,
     });
     return;
   }
 
+  if (update.message && await handleTelegramOrderMessage(update.message)) return;
+
   const callback = update.callback_query;
-  if (!callback?.data?.startsWith("claim:")) return;
+  if (!callback) return;
+  if (await handleTelegramOrderCallback(callback)) return;
+  if (!callback.data?.startsWith("claim:")) return;
+
   const orderId = callback.data.slice(6);
   const executorId = callback.from.id;
-  const username = callback.from.username ? `@${callback.from.username}` : [callback.from.first_name, callback.from.last_name].filter(Boolean).join(" ");
+  const username = callback.from.username ? \`@\${callback.from.username}\` : [callback.from.first_name, callback.from.last_name].filter(Boolean).join(" ");
   try {
     const claimed = await supabase(
-      `/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}&claimed_by_telegram_id=is.null&status=eq.new`,
+      \`/rest/v1/orders?id=eq.\${encodeURIComponent(orderId)}&claimed_by_telegram_id=is.null&status=eq.new\`,
       {
         method: "PATCH",
         headers: { Prefer: "return=representation" },
@@ -208,18 +509,18 @@ async function handleTelegramUpdate(update) {
       await telegram("sendMessage", {
         chat_id: executorId,
         text: [
-          `✅ Вы забрали заказ #${orderId}`,
-          `Услуга: ${claimed[0].service}`,
-          `Имя клиента: ${claimed[0].customer_name}`,
-          `Телефон: ${claimed[0].phone}`,
-          `Адрес: ${claimed[0].address || "не указан"}`,
-          `Объём: ${claimed[0].volume || "не указан"}`,
-          `Что нужно вывезти: ${claimed[0].details || "не указано"}`,
-          `Цена: ${claimed[0].price_estimate || "уточнить у диспетчера"}`,
+          \`✅ Вы забрали заказ #\${orderId}\`,
+          \`Услуга: \${claimed[0].service}\`,
+          \`Имя клиента: \${claimed[0].customer_name}\`,
+          \`Телефон: \${claimed[0].phone}\`,
+          \`Адрес: \${claimed[0].address || "не указан"}\`,
+          \`Объём: \${claimed[0].volume || "не указан"}\`,
+          \`Что нужно вывезти: \${claimed[0].details || "не указано"}\`,
+          \`Цена: \${claimed[0].price_estimate || "уточнить у диспетчера"}\`,
           "",
           "Свяжитесь с диспетчером для подтверждения заказа.",
           "Чтобы диспетчер мог связаться с вами, при желании отправьте свой номер кнопкой ниже.",
-        ].join("\n"),
+        ].join("\\n"),
         reply_markup: {
           keyboard: [[{ text: "📞 Отправить мой номер диспетчеру", request_contact: true }]],
           resize_keyboard: true,
@@ -228,7 +529,7 @@ async function handleTelegramUpdate(update) {
       });
     } catch (dmError) {
       await supabase(
-        `/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}&claimed_by_telegram_id=eq.${executorId}&status=eq.claimed`,
+        \`/rest/v1/orders?id=eq.\${encodeURIComponent(orderId)}&claimed_by_telegram_id=eq.\${executorId}&status=eq.claimed\`,
         {
           method: "PATCH",
           body: JSON.stringify({
@@ -251,17 +552,17 @@ async function handleTelegramUpdate(update) {
         await telegram("sendMessage", {
           chat_id: adminId,
           text: [
-            `🔔 ИСПОЛНИТЕЛЬ ВЗЯЛ ЗАКАЗ #${orderId}`,
-            `Исполнитель: ${username}`,
-            `Telegram ID: ${executorId}`,
-            `Telegram: ${callback.from.username ? "https://t.me/" + callback.from.username : "username не указан"}`,
-            `Услуга: ${claimed[0].service}`,
-            `Адрес: ${claimed[0].address || "не указан"}`,
-            `Объём: ${claimed[0].volume || "не указан"}`,
-            `Что нужно вывезти: ${claimed[0].details || "не указано"}`,
-            `Цена: ${claimed[0].price_estimate || "уточнить"}`,
+            \`🔔 ИСПОЛНИТЕЛЬ ВЗЯЛ ЗАКАЗ #\${orderId}\`,
+            \`Исполнитель: \${username}\`,
+            \`Telegram ID: \${executorId}\`,
+            \`Telegram: \${callback.from.username ? "https://t.me/" + callback.from.username : "username не указан"}\`,
+            \`Услуга: \${claimed[0].service}\`,
+            \`Адрес: \${claimed[0].address || "не указан"}\`,
+            \`Объём: \${claimed[0].volume || "не указан"}\`,
+            \`Что нужно вывезти: \${claimed[0].details || "не указано"}\`,
+            \`Цена: \${claimed[0].price_estimate || "уточнить"}\`,
             "Телефон исполнителя: ожидается — исполнитель может отправить его кнопкой в личном чате с ботом.",
-          ].join("\n"),
+          ].join("\\n"),
         });
       } catch (adminError) {
         console.error("Admin notification failed:", adminError.message);
@@ -273,7 +574,7 @@ async function handleTelegramUpdate(update) {
       await telegram("editMessageText", {
         chat_id: message.chat.id,
         message_id: message.message_id,
-        text: `✅ ЗАКАЗ #${orderId} ВЗЯТ\nИсполнитель: ${username}\nКонтакты клиента отправлены исполнителю в личные сообщения.`,
+        text: \`✅ ЗАКАЗ #\${orderId} ВЗЯТ\\nИсполнитель: \${username}\\nКонтакты клиента отправлены исполнителю в личные сообщения.\`,
       });
     }
   } catch (error) {
