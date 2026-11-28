@@ -1460,10 +1460,10 @@ export default function App() {
               </a>
               <a
                 className="social-telegram"
-                href="https://t.me/share/url?url=https%3A%2F%2Fwa.me%2F79673448484&text=%D0%92%D1%8B%D0%B2%D0%BE%D0%B7%20%D0%BC%D1%83%D1%81%D0%BE%D1%80%D0%B0%20%D0%A1%D0%9F%D0%B1"
+                href="https://t.me/VozovMusoraSPB247_bot"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="Поделиться контактом в Telegram"
+                aria-label="Открыть бота для оформления заказа в Telegram"
               >
                 <TelegramIcon />
               </a>
