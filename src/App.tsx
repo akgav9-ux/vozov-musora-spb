@@ -1285,13 +1285,11 @@ export default function App() {
               setModal({
                 type: "request",
                 service:
-                  quote.type === "furniture"
-                    ? "furniture"
-                    : quote.type === "heavy"
-                      ? "bags"
-                      : quote.volume === "8" || quote.volume === "27"
-                        ? "container"
-                        : "renovation",
+                  quote.type === "furniture" ? "furniture" :
+                  quote.type === "demolition" ? "demolition" :
+                  quote.type === "container" ? "container" :
+                  quote.type === "household" ? "apartment" :
+                  "renovation",
                 quote,
               })
             }
