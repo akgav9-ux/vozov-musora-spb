@@ -48,6 +48,7 @@ interface Quote {
   type: string;
   volume: string;
   phone: string;
+  details: string;
   price: number;
 }
 
@@ -157,11 +158,21 @@ function ReviewCard({ review }: { review: Review }) {
 
 function Calculator({ onRequest }: { onRequest: (quote: Quote) => void }) {
   const [address, setAddress] = useState("");
-  const [type, setType] = useState("");
+  const [type, setType] = useState("construction");
+  const [material, setMaterial] = useState("");
   const [volume, setVolume] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [floor, setFloor] = useState("");
+  const [lift, setLift] = useState("");
+  const [loaders, setLoaders] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
+
+  const typeNames: Record<string, string> = {
+    construction: "Строительный мусор", household: "Бытовой мусор",
+    furniture: "Мебель и техника", demolition: "Демонтаж", container: "Заказ контейнера",
+  };
 
   const calculate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -169,143 +180,116 @@ function Calculator({ onRequest }: { onRequest: (quote: Quote) => void }) {
       setPhoneError(true);
       return;
     }
-    const basePrices: Record<string, number> = {
-      bags: 1500,
-      "8": 7000,
-      "27": 14000,
-      loaders: 2500,
-    };
-    const surcharge = type === "heavy" ? 1.15 : 1;
+    const detailLines = [
+      "Категория: " + typeNames[type],
+      material ? "Что вывозим / материал: " + material : "",
+      quantity ? "Количество: " + quantity : "",
+      volume ? "Контейнер: " + volume + " м³" : "",
+      floor ? "Этаж: " + floor : "",
+      lift ? "Лифт: " + lift : "",
+      loaders ? "Грузчики: " + loaders : "",
+    ].filter(Boolean);
     setQuote({
-      address,
-      type,
-      volume,
-      phone,
-      price: Math.max(2000, Math.round(((basePrices[volume] || 2000) * surcharge) / 100) * 100),
+      address, type, volume: quantity || (volume ? "Контейнер " + volume + " м³" : "Объём уточняется"),
+      phone, details: detailLines.join("\n"), price: 0,
     });
   };
 
   return (
     <div className="calculator" id="calculator">
       {quote ? (
-        <motion.div
-          className="quote-result"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          aria-live="polite"
-        >
-          <span className="result-check">
-            <CheckCheck />
-          </span>
-          <h3>Ваш расчёт готов!</h3>
-          <p>Предварительная стоимость</p>
-          <strong className="quote-price">от {money(quote.price)} ₽</strong>
-          <p className="quote-address">
-            <MapPin size={15} />
-            {quote.address}
-          </p>
-          <button
-            className="button button-yellow"
-            onClick={() => onRequest(quote)}
-          >
-            Оформить заявку <ArrowRight />
-          </button>
-          <button className="text-button" onClick={() => setQuote(null)}>
-            Изменить данные
-          </button>
-          <small>Точную цену подтвердим до начала работ.</small>
+        <motion.div className="quote-result" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} aria-live="polite">
+          <span className="result-check"><CheckCheck /></span>
+          <h3>Данные для расчёта готовы</h3>
+          <p>Диспетчер уточнит стоимость по объёму, весу и условиям погрузки.</p>
+          <strong className="quote-price">Индивидуальный расчёт</strong>
+          <p className="quote-address"><MapPin size={15} />{quote.address}</p>
+          <button className="button button-yellow" onClick={() => onRequest(quote)}>Продолжить оформление <ArrowRight /></button>
+          <button className="text-button" onClick={() => setQuote(null)}>Изменить данные</button>
+          <small>Никаких неподтверждённых цен — согласуем стоимость до начала работ.</small>
         </motion.div>
       ) : (
         <>
-          <div className="calculator-title">
-            <Timer />
-            <h3>
-              Рассчитайте стоимость
-              <br />
-              за 1 минуту
-            </h3>
-          </div>
+          <div className="calculator-title"><Timer /><h3>Рассчитайте стоимость<br />за 1 минуту</h3></div>
           <form onSubmit={calculate} className="calculator-form">
-            <label className="input-wrap">
-              <MapPin />
-              <input
-                aria-label="Ваш адрес в Санкт-Петербурге"
-                placeholder="Ваш адрес в СПб"
-                required
-                minLength={5}
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                autoComplete="street-address"
-              />
+            <label className="input-wrap"><MapPin />
+              <input aria-label="Адрес" placeholder="Адрес вывоза в СПб или области" required minLength={5}
+                value={address} onChange={(event) => setAddress(event.target.value)} autoComplete="street-address" />
             </label>
-            <label className="input-wrap select-wrap">
-              <Box />
-              <select
-                aria-label="Тип мусора"
-                required
-                value={type}
-                onChange={(event) => setType(event.target.value)}
-              >
-                <option value="" disabled>
-                  Тип мусора
-                </option>
-                <option value="construction">Строительный мусор</option>
-                <option value="household">Бытовой мусор</option>
-                <option value="furniture">Мебель и техника</option>
-                <option value="heavy">Кирпич и бетон</option>
-              </select>
-              <ChevronDown className="select-chevron" />
+            <label className="input-wrap select-wrap"><Box />
+              <select aria-label="Тип услуги" value={type} onChange={(event) => { setType(event.target.value); setMaterial(""); setVolume(""); setQuantity(""); }}>
+                <option value="construction">Строительный мусор</option><option value="household">Бытовой мусор</option>
+                <option value="furniture">Мебель и техника</option><option value="demolition">Демонтаж</option>
+                <option value="container">Заказ контейнера / ПУХТО</option>
+              </select><ChevronDown className="select-chevron" />
             </label>
-            <label className="input-wrap select-wrap">
-              <BarChart3 />
-              <select
-                aria-label="Примерный объём"
-                required
-                value={volume}
-                onChange={(event) => setVolume(event.target.value)}
-              >
-                <option value="" disabled>
-                  Примерный объём
-                </option>
-                <option value="bags">До 10 мешков</option>
-                <option value="8">Контейнер 8 м³</option>
-                <option value="27">Контейнер 27 м³</option>
-                <option value="loaders">Машина с грузчиками</option>
-              </select>
-              <ChevronDown className="select-chevron" />
+            {type === "construction" && <>
+              <label className="input-wrap select-wrap"><Box />
+                <select aria-label="Материал" required value={material} onChange={(event) => setMaterial(event.target.value)}>
+                  <option value="">Выберите материал</option><option>Кирпич и бетон</option><option>Плитка и штукатурка</option>
+                  <option>Дерево</option><option>Гипсокартон</option><option>Смешанный строительный мусор</option><option>Другое</option>
+                </select><ChevronDown className="select-chevron" />
+              </label>
+              <label className="input-wrap"><BarChart3 /><input required placeholder="Объём или количество мешков" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+            </>}
+            {type === "household" && <>
+              <label className="input-wrap select-wrap"><Box />
+                <select value={material} required aria-label="Вид бытового мусора" onChange={(event) => setMaterial(event.target.value)}>
+                  <option value="">Что нужно вывезти?</option><option>Мешки с бытовым мусором</option><option>Коробки и старые вещи</option>
+                  <option>Смешанный бытовой мусор</option><option>Другое</option>
+                </select><ChevronDown className="select-chevron" />
+              </label>
+              <label className="input-wrap"><BarChart3 /><input required placeholder="Количество мешков / коробок или м³" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+            </>}
+            {type === "furniture" && <>
+              <label className="input-wrap select-wrap"><Box />
+                <select value={material} required aria-label="Мебель или техника" onChange={(event) => setMaterial(event.target.value)}>
+                  <option value="">Выберите предмет</option><option>Диван</option><option>Кресло</option><option>Шкаф</option>
+                  <option>Кровать / матрас</option><option>Стол / стулья</option><option>Холодильник</option>
+                  <option>Стиральная машина</option><option>Плита / духовка</option><option>Несколько предметов / другое</option>
+                </select><ChevronDown className="select-chevron" />
+              </label>
+              <label className="input-wrap"><BarChart3 /><input required placeholder="Количество предметов" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+            </>}
+            {type === "demolition" && <>
+              <label className="input-wrap select-wrap"><Box />
+                <select value={material} required aria-label="Что демонтировать" onChange={(event) => setMaterial(event.target.value)}>
+                  <option value="">Что нужно демонтировать?</option><option>Перегородки / стены</option><option>Полы / стяжка</option>
+                  <option>Плитка / сантехника</option><option>Старая мебель / встроенные конструкции</option>
+                  <option>Комплексный демонтаж</option><option>Другое</option>
+                </select><ChevronDown className="select-chevron" />
+              </label>
+              <label className="input-wrap"><BarChart3 /><input required placeholder="Площадь или объём работ (м² / м³)" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+            </>}
+            {type === "container" && <>
+              <label className="input-wrap select-wrap"><BarChart3 />
+                <select required value={volume} aria-label="Объём контейнера" onChange={(event) => setVolume(event.target.value)}>
+                  <option value="">Объём контейнера</option>{["6","8","12","14","20","27"].map((v) => <option key={v} value={v}>{v} м³</option>)}
+                </select><ChevronDown className="select-chevron" />
+              </label>
+              <label className="input-wrap"><Box /><input placeholder="Что будет загружаться в контейнер?" value={material} onChange={(event) => setMaterial(event.target.value)} required /></label>
+            </>}
+            <label className="input-wrap"><BarChart3 /><input placeholder="Этаж (если вынос не нужен — 0)" value={floor} onChange={(event) => setFloor(event.target.value)} /></label>
+            <label className="input-wrap select-wrap"><Box />
+              <select aria-label="Лифт" value={lift} onChange={(event) => setLift(event.target.value)}>
+                <option value="">Наличие лифта</option><option>Грузовой лифт</option><option>Пассажирский лифт</option>
+                <option>Лифта нет</option><option>Не требуется вынос</option>
+              </select><ChevronDown className="select-chevron" />
             </label>
-            <label className={`input-wrap ${phoneError ? "input-error" : ""}`}>
-              <Phone />
-              <input
-                aria-label="Телефон для расчёта"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                required
-                placeholder="+7 (___) ___-__-__"
-                value={phone}
-                aria-invalid={phoneError}
-                onChange={(event) => {
-                  setPhone(formatPhone(event.target.value));
-                  setPhoneError(false);
-                }}
-              />
+            <label className="input-wrap select-wrap"><Box />
+              <select aria-label="Грузчики" value={loaders} onChange={(event) => setLoaders(event.target.value)}>
+                <option value="">Нужны ли грузчики?</option><option>Да, нужны</option>
+                <option>Нет, погрузим самостоятельно</option><option>Нужна консультация</option>
+              </select><ChevronDown className="select-chevron" />
             </label>
-            {phoneError && (
-              <span className="field-error">
-                Введите номер полностью: 11 цифр
-              </span>
-            )}
-            <button
-              type="submit"
-              className="button button-yellow calculator-submit"
-            >
-              Получить расчёт <ArrowRight />
-            </button>
+            <label className={\`input-wrap \${phoneError ? "input-error" : ""}\`}><Phone />
+              <input aria-label="Телефон" type="tel" inputMode="tel" autoComplete="tel" required placeholder="+7 (___) ___-__-__"
+                value={phone} aria-invalid={phoneError} onChange={(event) => { setPhone(formatPhone(event.target.value)); setPhoneError(false); }} />
+            </label>
+            {phoneError && <span className="field-error">Введите номер полностью: 11 цифр</span>}
+            <button type="submit" className="button button-yellow calculator-submit">Подготовить заявку <ArrowRight /></button>
           </form>
-          <p className="data-safe">
-            <LockKeyhole /> Ваши данные в безопасности
-          </p>
+          <p className="data-safe"><LockKeyhole /> Диспетчер уточнит стоимость до начала работ</p>
         </>
       )}
     </div>
@@ -325,9 +309,9 @@ function RequestForm({
   const [phone, setPhone] = useState(quote?.phone || "");
   const [address, setAddress] = useState(quote?.address || "");
   const [volumeText, setVolumeText] = useState(
-    prices.find((price) => price.volume === (quote?.volume || volume))?.title || "",
+    quote?.volume || prices.find((price) => price.volume === volume)?.title || "",
   );
-  const [details, setDetails] = useState("");
+  const [details, setDetails] = useState(quote?.details || "");
   const [service, setService] = useState(initialService);
   const [phoneError, setPhoneError] = useState(false);
   const [ready, setReady] = useState(false);
@@ -340,12 +324,12 @@ function RequestForm({
   const selectedService = services.find((item) => item.id === service);
   const serviceName = selectedService?.title || "Вывоз мусора";
   const estimateLabel = quote
-    ? `от ${money(Math.max(2000, quote.price))} ₽`
+    ? "Стоимость уточнит диспетчер"
     : selectedVolume
       ? `от ${money(Math.max(2000, selectedVolume.price))} ₽`
       : selectedService?.price === "Индивидуальный расчёт"
-        ? "Индивидуальный расчёт (минимальный заказ 2 000 ₽)"
-        : selectedService?.price || "от 2 000 ₽";
+        ? "Индивидуальный расчёт"
+        : selectedService?.price || "Стоимость уточнит диспетчер";
   const message = `Здравствуйте! Хочу заказать услугу: ${serviceName}.\nИмя: ${name}.\nТелефон: ${phone}.\nАдрес: ${address || "уточню у диспетчера"}.\nПримерный объём: ${volumeText || "не указан"}.\nЧто именно нужно вывезти: ${details || "не указано"}.${quote ? `\nПредварительный расчёт: от ${money(quote.price)} ₽.` : ""}`;
 
   const submit = async (event: FormEvent) => {
@@ -412,7 +396,7 @@ function RequestForm({
             <Phone size={16} />
             {phone}
           </span>
-          <strong>Предварительная стоимость: {estimateLabel}</strong>
+          <strong>Стоимость: {estimateLabel}</strong>
         </div>
         <a
           className="button button-yellow"
@@ -443,7 +427,7 @@ function RequestForm({
         <strong>{estimateLabel}</strong>
       </div>
       <p className="form-note">
-        Это ориентир до уточнения количества, веса, этажа и условий погрузки. Минимальный заказ — 2 000 ₽.
+        Цена пока не рассчитывается автоматически: диспетчер уточнит вес, объём, расстояние и условия погрузки и согласует стоимость заранее.
       </p>
       <label>
         Ваше имя
