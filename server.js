@@ -79,6 +79,64 @@ function orderText(order) {
   ].join("\n");
 }
 
+async function getReviews(_req, res) {
+  try {
+    const rows = await supabase(
+      "/rest/v1/reviews?select=id,name,rating,text,created_at&order=created_at.desc&limit=100",
+    );
+    const reviews = (rows || []).map((row) => ({
+      id: String(row.id),
+      name: row.name,
+      date: new Date(row.created_at).toLocaleDateString("ru-RU", { timeZone: "Europe/Moscow" }),
+      rating: Number(row.rating),
+      text: row.text,
+    }));
+    return json(res, 200, { reviews });
+  } catch (error) {
+    console.error("Reviews loading failed:", error.message);
+    return json(res, 500, { error: "Не удалось загрузить отзывы." });
+  }
+}
+
+async function createReview(req, res) {
+  let input;
+  try {
+    input = await readJson(req, 8_000);
+  } catch {
+    return json(res, 400, { error: "Некорректные данные отзыва." });
+  }
+
+  const name = String(input.name || "").trim();
+  const reviewText = String(input.text || "").trim();
+  const rating = Number(input.rating);
+  if (name.length < 2 || name.length > 70 ||
+      reviewText.length < 10 || reviewText.length > 1000 ||
+      !Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return json(res, 400, { error: "Проверьте имя, оценку и текст отзыва." });
+  }
+
+  try {
+    const rows = await supabase("/rest/v1/reviews", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ name, rating, text: reviewText }),
+    });
+    const row = rows?.[0];
+    if (!row) throw new Error("Database did not return the created review");
+    const review = {
+      id: String(row.id),
+      name: row.name,
+      date: new Date(row.created_at).toLocaleDateString("ru-RU", { timeZone: "Europe/Moscow" }),
+      rating: Number(row.rating),
+      text: row.text,
+    };
+    return json(res, 201, { ok: true, review });
+  } catch (error) {
+    console.error("Review creation failed:", error.message);
+    return json(res, 500, { error: "Не удалось сохранить отзыв." });
+  }
+}
+
 async function createOrder(req, res) {
   let input;
   try {
@@ -625,6 +683,8 @@ async function serveStatic(req, res) {
 
 const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/health") return json(res, 200, { ok: true });
+  if (req.method === "GET" && req.url === "/api/reviews") return getReviews(req, res);
+  if (req.method === "POST" && req.url === "/api/reviews") return createReview(req, res);
   if (req.method === "POST" && req.url === "/api/orders") return createOrder(req, res);
   if (req.method === "POST" && req.url === "/api/telegram/webhook") {
     const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
