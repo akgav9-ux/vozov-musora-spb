@@ -605,7 +605,7 @@ function ReviewsContent({
   onAdd,
 }: {
   reviews: Review[];
-  onAdd: (review: Review) => void;
+  onAdd: (review: Review) => Promise<void>;
 }) {
   const [writing, setWriting] = useState(false);
   const [name, setName] = useState("");
@@ -613,6 +613,8 @@ function ReviewsContent({
   const [rating, setRating] = useState(5);
   const [order, setOrder] = useState("new");
   const [added, setAdded] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const dateNumber = (date: string) =>
     Number(date.split(".").reverse().join(""));
   const averageRating =
@@ -624,20 +626,29 @@ function ReviewsContent({
       : dateNumber(a.date) - dateNumber(b.date),
   );
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    onAdd({
-      id: `local-${Date.now()}`,
-      name: name.trim(),
-      date: new Date().toLocaleDateString("ru-RU"),
-      rating,
-      text: text.trim(),
-    });
-    setWriting(false);
-    setAdded(true);
-    setName("");
-    setText("");
-    setRating(5);
+    if (submitting) return;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      await onAdd({
+        id: "",
+        name: name.trim(),
+        date: new Date().toLocaleDateString("ru-RU"),
+        rating,
+        text: text.trim(),
+      });
+      setWriting(false);
+      setAdded(true);
+      setName("");
+      setText("");
+      setRating(5);
+    } catch {
+      setSubmitError("Не удалось отправить отзыв. Попробуйте ещё раз.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -660,7 +671,7 @@ function ReviewsContent({
       </div>
       {added && (
         <p className="review-added" role="status">
-          <Check size={18} /> Спасибо! Ваш отзыв сохранён в этом браузере.
+          <Check size={18} /> Спасибо! Ваш отзыв отправлен и сохранён.
         </p>
       )}
       {writing && (
@@ -704,8 +715,9 @@ function ReviewsContent({
               rows={3}
             />
           </label>
-          <button className="button button-yellow" type="submit">
-            Опубликовать отзыв <Send size={18} />
+          {submitError && <p className="form-error" role="alert">{submitError}</p>}
+          <button className="button button-yellow" type="submit" disabled={submitting}>
+            {submitting ? "Отправляем..." : "Опубликовать отзыв"} <Send size={18} />
           </button>
         </form>
       )}
@@ -801,30 +813,27 @@ export default function App() {
   const [modal, setModal] = useState<ModalState>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
-  const [reviews, setReviews] = useState<Review[]>(() => {
-    try {
-      const saved: unknown = JSON.parse(
-        localStorage.getItem("spb-reviews") || "[]",
-      );
-      const valid = Array.isArray(saved)
-        ? saved.filter(
-            (item): item is Review =>
-              typeof item?.id === "string" &&
-              typeof item?.name === "string" &&
-              typeof item?.text === "string" &&
-              /^\d{2}\.\d{2}\.\d{4}$/.test(item?.date) &&
-              Number.isInteger(item?.rating) &&
-              item.rating >= 1 &&
-              item.rating <= 5,
-          )
-        : [];
-      return [...valid, ...initialReviews];
-    } catch {
-      return initialReviews;
-    }
-  });
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const reduceMotion = useReducedMotion();
   const closeModal = useCallback(() => setModal(null), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/reviews", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Не удалось загрузить отзывы");
+        return response.json();
+      })
+      .then((data: { reviews?: Review[] }) => {
+        if (!cancelled && Array.isArray(data.reviews)) {
+          setReviews([...data.reviews, ...initialReviews]);
+        }
+      })
+      .catch((error) => console.error("Reviews loading failed:", error));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!servicesOpen) return;
@@ -856,17 +865,21 @@ export default function App() {
     setMenuOpen(false);
     setServicesOpen(false);
   };
-  const addReview = (review: Review) => {
-    const updated = [review, ...reviews];
-    setReviews(updated);
-    try {
-      localStorage.setItem(
-        "spb-reviews",
-        JSON.stringify(updated.filter((item) => item.id.startsWith("local-"))),
-      );
-    } catch {
-      /* Reviews remain available for this visit without local storage. */
+  const addReview = async (review: Review) => {
+    const response = await fetch("/api/reviews", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: review.name,
+        rating: review.rating,
+        text: review.text,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.review) {
+      throw new Error(data.error || "Не удалось сохранить отзыв");
     }
+    setReviews((current) => [data.review as Review, ...current]);
   };
 
   const navLinks = (
