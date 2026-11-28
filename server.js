@@ -73,6 +73,7 @@ function orderText(order) {
     `Объём: ${order.volume || "не указан"}`,
     `Что нужно вывезти: ${order.details || "не указано"}`,
     `Предварительная стоимость: ${order.price_estimate || "уточнить"}`,
+    `Фотографии: ${Array.isArray(order.photos) ? order.photos.length : 0}`,
     "",
     "Нажмите кнопку, чтобы взять заказ. Контакты клиента откроются только первому исполнителю.",
   ].join("\n");
