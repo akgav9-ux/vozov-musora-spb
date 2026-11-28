@@ -290,8 +290,15 @@ async function handleTelegramOrderMessage(message, suppliedPhone = "") {
   if (!userId || !chatId || message.chat.type !== "private") return false;
 
   const text = String(message.text || "").trim();
-  if (text === "/start" || text.startsWith("/start ") || text === "/order" ||
-      text.startsWith("/order@") || text === "📝 Создать заявку") {
+  if (text === "/start" || text.startsWith("/start ")) {
+    await telegram("sendMessage", {
+      chat_id: chatId,
+      text: "Здравствуйте! Здесь можно оформить заявку на вывоз мусора, мебели или демонтаж. Нажмите кнопку ниже.",
+      reply_markup: { keyboard: [[{ text: "📝 Создать заявку" }]], resize_keyboard: true },
+    });
+    return true;
+  }
+  if (text === "/order" || text.startsWith("/order@") || text === "📝 Создать заявку") {
     await startTelegramOrder(message);
     return true;
   }
